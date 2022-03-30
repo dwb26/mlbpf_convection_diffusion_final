@@ -26,8 +26,8 @@ level0s = list(map(int, ml_parameters.readline().split()))
 length = int(hmm_data.readline())
 sig_sd, obs_sd = list(map(float, hmm_data.readline().split()))
 hmm_data.readline()
-nx = int(hmm_data.readline())
-for n in range(2):
+nx, nt = list(map(int, hmm_data.readline().split()))
+for n in range(4):
     hmm_data.readline()
 
 
@@ -69,8 +69,8 @@ max_allocs = np.max(alloc_counters)
 mse_arr = np.zeros((N_MESHES, N_ALLOCS, N_data * N_trials))
 ks_arr = np.zeros((N_MESHES, N_ALLOCS, N_data * N_trials))
 srs_arr = np.zeros((N_MESHES, N_ALLOCS, N_data * N_trials))
-glob_min = 100
-glob_max = -100
+glob_min = 10000
+glob_max = -10000
 eps = 1e-06
 for i_mesh in range(N_MESHES):
 	for n_alloc in range(N_ALLOCS):
@@ -116,7 +116,7 @@ colors = ["orchid", "mediumpurple", "royalblue", "powderblue", "mediumseagreen",
 fig_width = 8; fig_height = 7
 hspace = 0.9
 fig1, axs = plt.subplots(nrows=N_MESHES, ncols=1, figsize=(fig_width, fig_height))
-fig2, axs2 = plt.subplots(nrows=3, ncols=1, figsize=(fig_width, fig_height))
+fig2, axs2 = plt.subplots(nrows=2, ncols=1, figsize=(fig_width, fig_height))
 fig1.subplots_adjust(hspace=hspace)
 fig1.suptitle(r"N_data = {}, N_trials = {}, nx = {}, N_bpf = {}, $\sigma_{} = {}$, $\sigma_{} = {}$, len = {}".format(N_data, N_trials, nx, N_bpf, "s", sig_sd, "o", obs_sd, length))
 fig2.subplots_adjust(hspace=0.2)
@@ -136,7 +136,7 @@ if N_MESHES > 1:
 		ax = sns.boxplot(data=pd.DataFrame(np.log10(ks_arr[i_mesh].T), columns=N1s), ax=axs[i_mesh], color=colors[i_mesh], whis=1000)
 		ax.plot(range(max_allocs), bpf_median_ks_log10 * np.ones(max_allocs), color="limegreen", label="BPF KS")
 		ax.set_title("Level 0 mesh size = {}".format(level0s[i_mesh]), fontsize=9)
-		ax.set(ylim=(glob_min, glob_max))
+		# ax.set(ylim=(glob_min, glob_max))
 		if i_mesh == N_MESHES - 1:
 			ax.set_xlabel(r"$N_1$")
 		if i_mesh < N_MESHES - 1:
@@ -208,7 +208,7 @@ axs2[0].set_title("(Median log10(KS statistics))", fontsize=9)
 axs2[0].plot(N1s[:max_allocs], bpf_median_ks_log10 * np.ones(max_allocs), color="black", label="BPF")
 for i_mesh in range(N_MESHES):
 	axs2[0].plot(N1s[:alloc_counters[i_mesh]], np.median(np.log10(ks_arr[i_mesh, :alloc_counters[i_mesh], :].T), axis=0), label=level0s[i_mesh], marker="o", color=colors[i_mesh], markersize=3)
-axs2[0].set_xticks([])
+# axs2[0].set_xticks([])
 axs2[0].legend()
 
 
@@ -218,14 +218,14 @@ axs2[0].legend()
 # Sign ratios
 #
 # ------------------------------------------------------------------------------------------------------------------- #
-axs2[1].set_title("Mean sign ratios", fontsize=9)
-for i_mesh in range(N_MESHES):
-    # mean_srs = np.mean(srs_arr[i_mesh, :alloc_counters[i_mesh], :].T, axis=0)
-    mean_srs = np.mean(srs_arr[i_mesh], axis=1)
-    # print(srs_arr[i_mesh][0][:])
-    axs2[1].plot(N1s[0:12], mean_srs, label=level0s[i_mesh], marker="o", color=colors[i_mesh], markersize=3)
-axs2[1].set_xlabel("N1")
-# axs2[2].legend(loc=3, prop={'size': 8})
+# axs2[1].set_title("Mean sign ratios", fontsize=9)
+# for i_mesh in range(N_MESHES):
+#     # mean_srs = np.mean(srs_arr[i_mesh, :alloc_counters[i_mesh], :].T, axis=0)
+#     mean_srs = np.mean(srs_arr[i_mesh], axis=1)
+#     # print(srs_arr[i_mesh][0][:])
+#     axs2[1].plot(N1s[0:12], mean_srs, label=level0s[i_mesh], marker="o", color=colors[i_mesh], markersize=3)
+# axs2[1].set_xlabel("N1")
+# # axs2[2].legend(loc=3, prop={'size': 8})
 
 
 
@@ -263,10 +263,10 @@ axs2[1].set_xlabel("N1")
 # ------------------------------------------------------------------------------------------------------------------- #
 times_list = np.array(list(map(float, raw_times.readline().split())))
 total_time_length = len(times_list)
-axs2[2].set_title("Trial times", fontsize=9)
-axs2[2].plot(range(total_time_length), np.array(times_list).flatten(), linewidth=0.5)
-axs2[2].plot(range(total_time_length), np.mean(bpf_times) * np.ones(total_time_length), label="bpf mean", color="black")
-axs2[2].set_xlabel("Trial")
+axs2[1].set_title("Trial times", fontsize=9)
+axs2[1].plot(range(total_time_length), np.array(times_list).flatten(), linewidth=0.5)
+axs2[1].plot(range(total_time_length), np.mean(bpf_times) * np.ones(total_time_length), label="bpf mean", color="black")
+axs2[1].set_xlabel("Trial")
 
 plt.tight_layout()
 plt.show()

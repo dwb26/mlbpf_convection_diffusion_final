@@ -31,6 +31,8 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 
 void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_rng * rng, w_double ** ml_weighted, double * sign_ratios);
 
+void ml_bootstrap_particle_filter_timed(HMM * hmm, int * sample_sizes, int * nxs, gsl_rng * rng, w_double ** ml_weighted, double * sign_ratios);
+
 double sigmoid(double x, double a, double b);
 
 double sigmoid_inv(double x, double a, double b);

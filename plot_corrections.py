@@ -15,12 +15,13 @@ nx, nt = list(map(int, hmm_data_f.readline().split()))
 T_stop = float(hmm_data_f.readline())
 v = float(hmm_data_f.readline())
 mu = float(hmm_data_f.readline())
+upper_bound, lower_bound = list(map(float, hmm_data_f.readline().split()))
 signal = np.empty(length); obs = np.empty(length)
 for n in range(length):
 	signal[n], obs[n] = list(map(float, hmm_data_f.readline().split()))
 
 # Read in the true correction samples that are used for the regression
-N1 = 250
+N1 = 100
 thetas = []; corrections = []
 for line in corrections_f:
 	theta, correction = list(map(float, line.split()))
@@ -60,7 +61,6 @@ for line in true_curve_f0:
 # 	axs[m, n % 4].scatter(thetas[k], corrections[k], s=2, color="black", label="Samples")
 # 	axs[m, n % 4].plot(sig_theta_mesh[k], regression_points[k], label="Approximant")
 # 	axs[m, n % 4].plot(sig_theta_mesh[k], true_curve[k], label="True soln")
-# 	# axs[m, n % 4].plot(sig_theta_mesh[k], true_curve0[k], label="0 soln")
 # 	if (n + 1) % 4 == 0:
 # 		m += 1
 # 	if n == 0:
@@ -70,9 +70,6 @@ obs_disc = 250
 dx_obs = 3 * obs_sd / (obs_disc - 1)
 fig, axs = plt.subplots(2, 1, figsize=(12, 9))
 for k in range(length):
-	# ax.plot(sig_theta_mesh[k], true_curve[k], label=r"$h^1 - h^0$")
-	# ax.scatter(thetas[k], corrections[k], s=2, color="black", label="Samples")
-	# ax.plot(sig_theta_mesh[k], regression_points[k], label="Approximant")
 
 	# Plot the solution curves
 	axs[k].plot(sig_theta_mesh[k], true_curve[k], label=r"$\varphi^1$")

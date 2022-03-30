@@ -34,7 +34,7 @@ void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_dou
 	/* ----------------- */
 	/* Run the BPF with a set number of particles N_bpf < N_ref and record the accuracy and the mean time taken. Then for each mesh configuration, increment the level 1 particle allocation and compute the level 0 particle allocation so that the time taken for the MLBPF is roughly the same as the BPF */
 	double T, T_temp;
-	T = perform_BPF_trials(hmm, N_bpf, rng, 1, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE);
+	T = perform_BPF_trials(hmm, N_bpf, rng, N_trials, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE);
 	if (n_data == 0)
 		compute_sample_sizes(hmm, rng, level0_meshes, T, N0s, N1s, N_bpf, N_trials, ml_weighted);
 	T_temp = read_sample_sizes(hmm, N0s, N1s, N_trials);
@@ -128,6 +128,11 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	gsl_vector_free(main);
 	gsl_vector_free(upper);
 	gsl_matrix_free(B);
+	gsl_vector_free(rho);
+	gsl_vector_free(rho_tilde);
+	gsl_rng_free(rng0);
+	free(thetas);
+	free(solns);
 
 	/* Read in the data from the file */
 	FILE * DATA_IN = fopen("hmm_data.txt", "r");
@@ -201,6 +206,8 @@ void generate_hmm_0(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, in
 	gsl_vector_free(main);
 	gsl_vector_free(upper);
 	gsl_matrix_free(B);
+	gsl_vector_free(rho);
+	gsl_vector_free(rho_tilde);
 
 }
 

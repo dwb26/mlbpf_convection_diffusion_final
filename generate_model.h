@@ -2,7 +2,7 @@ void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_dou
 
 void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int nt);
 
-void generate_hmm_20(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx);
+void generate_hmm_0(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int nt);
 
 void run_reference_filter(HMM * hmm, int N_ref, gsl_rng * rng, w_double ** weighted_ref, int n_data);
 

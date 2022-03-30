@@ -368,14 +368,12 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		/*																											 																										 */
 		/* --------------------------------------------------------------------------------------------------------- */
 		if (N1 > 0) {
-			;
+			// ;
 			regression_fit(s_sig, corrections, N0, N1, M_poly, poly_weights, PHI, C, C_inv, MP, C_gsl, p, C_inv_gsl);
 			for (int i = 0; i < N_tot; i++)
 				solns0[i] += poly_eval(s_sig[i], poly_weights, poly_degree);
 
 			// generate_adaptive_artificial_mesh(N_tot, s_sig, mesh_size, s_mesh);
-			// printf("B\n");
-			// fflush(stdout);
 			// for (int l = 0; l < mesh_size; l++) {
 
 				// gsl_vector_memcpy(rho1, rho_init1);
@@ -384,13 +382,9 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 				/* Output the regressed correction curve approximation over the artificial particle mesh */
 				// fprintf(REGRESSION_CURVE, "%e %e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
 
-				// printf("C\n");
-				// fflush(stdout);
 				/* Output the true correction curve */
 			// 	solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
 			// 	g1 = rho1->data[obs_pos1];
-			// 	// printf("D\n");
-			// 	// fflush(stdout);
 			// 	solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
 			// 	g0 = rho0->data[obs_pos0];
 			// 	// g0 = rho0[obs_pos0] + poly_eval(s_mesh[l], poly_weights, poly_degree);
@@ -467,8 +461,8 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		for (int i = 0; i < N_tot; i++) {
 			weights[i] /= normaliser;
 			absolute_weights[i] /= abs_normaliser;
-			// ml_weighted[n][i].x = s_sig[i];
-			// ml_weighted[n][i].w = weights[i];
+			ml_weighted[n][i].x = s_sig[i];
+			ml_weighted[n][i].w = weights[i];
 			x_hat += s_sig[i] * weights[i];
 		}
 		fprintf(ML_XHATS, "%e ", x_hat);
