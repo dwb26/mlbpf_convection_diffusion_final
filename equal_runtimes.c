@@ -13,12 +13,12 @@
 #include "solvers.h"
 #include "generate_model.h"
 
-const int N_TOTAL_MAX = 100000000;
+const int N_TOTAL_MAX = 10000000;
 const int N_LEVELS = 2;
 // const int N_MESHES = 5;
-// const int N_ALLOCS = 6;
+// const int N_ALLOCS = 7;
 const int N_MESHES = 1;
-const int N_ALLOCS = 1;
+const int N_ALLOCS = 3;
 
 void output_parameters(int N_trials, int * level0_meshes, int nx, int * N1s, int N_data, int N_bpf);
 void record_reference_data(HMM * hmm, w_double ** weighted_ref, int N_ref, FILE * FULL_HMM_DATA, FILE * FULL_REF_DATA, FILE * REF_STDS);
@@ -44,17 +44,17 @@ int main(void) {
 
 	/* Main experiment parameters */
 	/* -------------------------- */
-	int N_data = 1;
-	int N_trials = 1;
+	int N_data = 30;
+	int N_trials = 10;
 	int length = 2;
-	int nx = 250;
+	int nx = 150;
 	int nt = 50;
-	int N_ref = 100;
-	int N_bpf = 100;
+	int N_ref = 1000;
+	int N_bpf = 250;
 	// int level0_meshes[N_MESHES] = { 40, 30, 20, 10, 5 };
-	// int N1s[N_ALLOCS] = { 0, 3, 25, 50, 75, 99 };
-	int level0_meshes[N_MESHES] = { 45 };
-	int N1s[N_ALLOCS] = { 250 };
+	// int N1s[N_ALLOCS] = { 0, 40, 80, 120, 160, 200, 240 };
+	int level0_meshes[N_MESHES] = { 40 };
+	int N1s[N_ALLOCS] = { 0, 40, 80 };
 	int nxs[N_LEVELS] = { 0, nx };
 	int ** N0s = (int **) malloc(N_MESHES * sizeof(int *));
 	int * sample_sizes = (int *) malloc(N_LEVELS * sizeof(int));		
@@ -115,6 +115,27 @@ int main(void) {
 		generate_hmm(rng, hmm, n_data, length, nx, nt);
 		equal_runtimes_model(rng, hmm, N0s, N1s, weighted_ref, N_ref, N_trials, N_bpf, level0_meshes, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE, ml_weighted);
 		record_reference_data(hmm, weighted_ref, N_ref, FULL_HMM_DATA, FULL_REF_DATA, REF_STDS);
+		printf("X\n");
+		fflush(stdout);
+		for (int n = 0; n < length; n++) {
+			for (int i = 0; i < N_ref; i++) {
+				weighted_ref[n][i].x = weighted_ref[n][i].x;
+				weighted_ref[n][i].w = weighted_ref[n][i].w;
+			}
+		}
+		printf("Y\n");
+		fflush(stdout);
+
+		printf("X0\n");
+		fflush(stdout);
+		for (int n = 0; n < length; n++) {
+			for (int i = 0; i < N_TOTAL_MAX; i++) {
+				ml_weighted[n][i].x = 1;
+				ml_weighted[n][i].w = 0;
+			}
+		}
+		printf("Y0\n");
+		fflush(stdout);
 
 
 		/* Run the MLBPF for each nx0/particle allocation for the same time as the BPF and test its accuracy */
@@ -131,9 +152,12 @@ int main(void) {
 				printf("**********************************************************\n");
 
 				nxs[0] = level0_meshes[i_mesh];
-				N1 = N1s[n_alloc], N0 = N0s[i_mesh][n_alloc], N_tot = N0 + N1;
+				N1 = N1s[n_alloc], N0 = N0s[i_mesh][n_alloc];
+				N_tot = N0 + N1;
 				sample_sizes[0] = N0, sample_sizes[1] = N1;
 				alloc_counters[i_mesh] = N_ALLOCS;
+				printf("A\n");
+				fflush(stdout);
 
 				ref_xhat = 0.0, ml_xhat = 0.0;
 				if (N0 == 0) {
@@ -150,15 +174,27 @@ int main(void) {
 						double elapsed = (double) (clock() - trial_timer) / (double) CLOCKS_PER_SEC;
 
 						ks = 0.0, sr = 0.0;
+						printf("N_tot = %d, length = %d\n", N_tot, length);
+						fflush(stdout);
 						for (int n = 0; n < length; n++) {
-							qsort(ml_weighted[n], N_tot, sizeof(w_double), weighted_double_cmp);
-							ks += ks_statistic(N_ref, weighted_ref[n], N_tot, ml_weighted[n]) / (double) length;
+							printf("I\n");
+							fflush(stdout);
+							// qsort(ml_weighted[n], N_tot, sizeof(w_double), weighted_double_cmp);
+							printf("J\n");
+							fflush(stdout);
+							// ks += ks_statistic(N_ref, weighted_ref[n], N_tot, ml_weighted[n]) / (double) length;
+							printf("K\n");
+							fflush(stdout);
 							sr += sign_ratios[n] / (double) length;
 						}
-						raw_mse[i_mesh][n_alloc][n_data * N_trials + n_trial] = compute_mse(weighted_ref, ml_weighted, length, N_ref, N_tot);
+						printf("L\n");
+						fflush(stdout);
+						// raw_mse[i_mesh][n_alloc][n_data * N_trials + n_trial] = compute_mse(weighted_ref, ml_weighted, length, N_ref, N_tot);
 						raw_ks[i_mesh][n_alloc][n_data * N_trials + n_trial] = ks;
 						raw_srs[i_mesh][n_alloc][n_data * N_trials + n_trial] = sr;
 						raw_times[i_mesh][n_alloc][n_data * N_trials + n_trial] = elapsed;
+						printf("M\n");
+						fflush(stdout);
 					}
 				}
 				printf("\n");

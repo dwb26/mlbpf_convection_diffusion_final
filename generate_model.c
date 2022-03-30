@@ -34,7 +34,7 @@ void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_dou
 	/* ----------------- */
 	/* Run the BPF with a set number of particles N_bpf < N_ref and record the accuracy and the mean time taken. Then for each mesh configuration, increment the level 1 particle allocation and compute the level 0 particle allocation so that the time taken for the MLBPF is roughly the same as the BPF */
 	double T, T_temp;
-	T = perform_BPF_trials(hmm, N_bpf, rng, N_trials, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE);
+	T = perform_BPF_trials(hmm, N_bpf, rng, 1, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE);
 	if (n_data == 0)
 		compute_sample_sizes(hmm, rng, level0_meshes, T, N0s, N1s, N_bpf, N_trials, ml_weighted);
 	T_temp = read_sample_sizes(hmm, N0s, N1s, N_trials);
@@ -48,8 +48,8 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	double sig_sd = 0.5;
-	double obs_sd = 0.85;
+	double sig_sd = 5.5;
+	double obs_sd = 2.85;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
@@ -160,22 +160,21 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 }
 
 
-void generate_hmm_20(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx) {
+void generate_hmm_0(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int nt) {
 
 	/** 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	int nt = 250;
-	double sig_sd = 10.5;
-	double obs_sd = 0.8;
+	double sig_sd = 0.5;
+	double obs_sd = 0.85;
 	double space_left = 0.0, space_right = 1.0;
-	double T_stop = 0.1;
+	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
 	double dt = T_stop / (double) (nt - 1);
 	double r = 0.5 * dt / (dx * dx);
 	double rdx_sq = r * dx * dx;
-	double s = 25.0, obs, v = 15.0;
+	double v = 15.0;
 	double a = -r * (v * dx + 1);
 	double b = 1 + 2 * r + r * v * dx;
 	double c = r * (v * dx + 1);
@@ -262,7 +261,7 @@ void read_cdf(w_double ** w_particles, HMM * hmm, int n_data) {
 	sprintf(ref_name, "ref_particles_sig_sd=%s_obs_sd=%s_len=%s_s0=%s_n_data=%s.txt", sig_sd_str, obs_sd_str, len_str, s0_str, n_data_str);
 	FILE * data = fopen(ref_name, "r");
 	fscanf(data, "%d %d\n", &N, &length);
-
+	printf("N = %d, length = %d\n", N, length);
 	for (int n = 0; n < length; n++) {
 		for (int i = 0; i < N; i++)
 			fscanf(data, "%lf ", &w_particles[n][i].x);
@@ -425,7 +424,6 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 				}
 			}
 
-
 			N0s[i_mesh][n_alloc] = sample_sizes[0];
 			printf("N0 = %d for N1 = %d and nx0 = %d, timed diff = %.10lf\n", sample_sizes[0], N1s[n_alloc], nxs[0], diff);
 			printf("\n");
@@ -439,8 +437,8 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 
 	fclose(N0s_f);
 
+	free(nxs);
 	free(sign_ratios);
-	free(ml_weighted);
 	free(sample_sizes);
 
 }

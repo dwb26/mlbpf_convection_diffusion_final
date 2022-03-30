@@ -218,77 +218,12 @@ void solve(int nx, int nt, double dx, double dt, gsl_matrix * B, gsl_vector * rh
 
 		/* Print the solution */
 		// for (int j = 1; j < nx + 1; j++)
-			// fprintf(CURVE_DATA, "%e ", rho->data[j]);
+		// 	fprintf(CURVE_DATA, "%e ", rho->data[j]);
 		// fprintf(CURVE_DATA, "\n");
 
 	}
 
 }
-
-
-void level0_solve(int nx, int nt, double dx, double dt, gsl_matrix * B, gsl_vector * rho, gsl_vector * rho_tilde, double s, double rdx_sq, gsl_vector * main, gsl_vector * upper, gsl_vector * lower, FILE * CURVE_DATA0) {
-
-	/* Implement the equation Av+ = Bv */
-	/* ------------------------------- */
-	for (int t = 0; t < nt; t++) {
-
-		/* Set the boundary conditions */
-		rho->data[0] = fabs(s) * exp(-t / (double) nt);
-		rho->data[nx + 1] = rho->data[nx];
-
-		/* Construct the RHS */
-		gsl_blas_dgemv(CblasNoTrans, 1.0, B, rho, 0.0, rho_tilde);
-		for (int n = 0; n < nx + 2; n++) {
-			// rho_tilde->data[n] += 2 * rdx_sq * s; // s is constant case
-			// rho_tilde->data[n] += 2 * rdx_sq * s * s * n * dx; // s dependent on space
-			rho_tilde->data[n] += 2 * rdx_sq * exp(s * s * n * dx); // s dependent on space
-		}
-
-		/* Solve for the LHS */
-		gsl_linalg_solve_tridiag(main, upper, lower, rho_tilde, rho);
-
-		/* Print the solution */
-		// printf("%lf %lf\n", rho->data[0], rho_tilde->data[0]);
-		for (int j = 1; j < nx + 1; j++)
-			fprintf(CURVE_DATA0, "%e ", rho->data[j]);
-		fprintf(CURVE_DATA0, "\n");
-
-	}
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
