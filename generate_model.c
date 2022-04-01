@@ -48,8 +48,8 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	double sig_sd = 5.5;
-	double obs_sd = 2.85;
+	double sig_sd = 1.5;
+	double obs_sd = 5.5;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);

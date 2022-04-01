@@ -54,7 +54,7 @@ for line in true_curve_f0:
 
 # fig, axs = plt.subplots(nrows=2, ncols=4, figsize=(12, 7))
 # m = 0
-# custm_length = 8
+# custm_length = 1
 # start_point = 0
 # for k in range(start_point, start_point + custm_length):
 # 	n = k - start_point

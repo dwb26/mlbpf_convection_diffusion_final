@@ -149,7 +149,7 @@ else:
 		ax.plot(range(max_allocs), bpf_median_ks_log10 * np.ones(max_allocs), color="limegreen", label="BPF KS")
 		# ax.plot(range(max_allocs), bpf_median_ks_log10 * np.ones(max_allocs), "ro", label="BPF KS")
 		ax.set_title("Level 0 mesh size = {}".format(level0s[i_mesh]), fontsize=9)
-		ax.set(ylim=(glob_min, glob_max))
+		# ax.set(ylim=(glob_min, glob_max))
 		if i_mesh == N_MESHES - 1:
 			ax.set_xlabel(r"$N_1$")
 

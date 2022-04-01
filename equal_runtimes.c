@@ -18,7 +18,7 @@ const int N_LEVELS = 2;
 const int N_MESHES = 6;
 const int N_ALLOCS = 7;
 // const int N_MESHES = 1;
-// const int N_ALLOCS = 3;
+// const int N_ALLOCS = 1;
 
 void output_parameters(int N_trials, int * level0_meshes, int nx, int * N1s, int N_data, int N_bpf);
 void record_reference_data(HMM * hmm, w_double ** weighted_ref, int N_ref, FILE * FULL_HMM_DATA, FILE * FULL_REF_DATA, FILE * REF_STDS);
@@ -44,20 +44,21 @@ int main(void) {
 
 	/* Main experiment parameters */
 	/* -------------------------- */
-	int N_data = 3;
-	int N_trials = 10;
+	int N_data = 5;
+	int N_trials = 25;
 	int length = 2;
-	int nx = 150;
-	int nt = 50;
+	int nx = 100;
+	int nt = 25;
 	int N_ref = 100000;
-	int N_bpf = 250;
-	int level0_meshes[N_MESHES] = { 140, 100, 80, 60, 40, 20 };
-	int N1s[N_ALLOCS] = { 0, 40, 80, 120, 160, 200, 240 };
-	// int level0_meshes[N_MESHES] = { 40 };
-	// int N1s[N_ALLOCS] = { 0, 40, 80 };
+	int N_bpf = 500;
+	int level0_meshes[N_MESHES] = { 80, 60, 40, 20, 10, 5 };
+	// int N1s[N_ALLOCS] = { 0, 50, 100, 150, 200, 240 };
+	int N1s[N_ALLOCS] = { 0, 50, 100, 200, 300, 400, 450 };
+	// int level0_meshes[N_MESHES] = { 20 };
+	// int N1s[N_ALLOCS] = { 100 };
 	int nxs[N_LEVELS] = { 0, nx };
 	int ** N0s = (int **) malloc(N_MESHES * sizeof(int *));
-	int * sample_sizes = (int *) malloc(N_LEVELS * sizeof(int));		
+	int * sample_sizes = (int *) malloc(N_LEVELS * sizeof(int));
 	int * alloc_counters = (int *) malloc(N_MESHES * sizeof(int));
 	double * sign_ratios = (double *) calloc(length, sizeof(double));
 	double *** raw_ks = (double ***) malloc(N_MESHES * sizeof(double **));
