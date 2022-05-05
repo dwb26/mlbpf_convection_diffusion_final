@@ -48,8 +48,8 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	double sig_sd = 1.5;
-	double obs_sd = 5.5;
+	double sig_sd = 2.5;
+	double obs_sd = 30.0;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
@@ -61,8 +61,8 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	double b = 1 + 2 * r + r * v * dx;
 	double c = r * (v * dx + 1);
 	double d = 1 - 2 * r - r * v * dx;
-	double lower_bound = 0.0, upper_bound = 7.5;
-	double s_sig = 5.0;
+	double lower_bound = 6.0, upper_bound = 8.0;
+	double s_sig = 7.0;
 	gsl_vector * lower = gsl_vector_calloc(nx + 1);
 	gsl_vector * main = gsl_vector_calloc(nx + 2);
 	gsl_vector * upper = gsl_vector_calloc(nx + 1);
@@ -279,10 +279,14 @@ void read_cdf(w_double ** w_particles, HMM * hmm, int n_data) {
 }
 
 
-double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int N_ref, w_double ** weighted_ref, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE) {
+double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int N_ref, w_double ** weighted_ref, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, FILE * BPF_CENTILE_MSE) {
 
 	int length = hmm->length;
-	double ks = 0.0, elapsed = 0.0, mse = 0.0, mean_elapsed = 0.0;
+	double centile = 0.95;
+	double ks = 0.0, elapsed = 0.0, mse = 0.0, mean_elapsed = 0.0, q_mse = 0.0;
+	double * ref_centiles = (double *) malloc(length * sizeof(double));
+	compute_nth_percentile(weighted_ref, N_ref, centile, length, ref_centiles);	
+	double * bpf_centiles = (double *) malloc(length * sizeof(double));
 	w_double ** weighted = (w_double **) malloc(length * sizeof(w_double *));
 	for (int n = 0; n < length; n++)
 		weighted[n] = (w_double *) malloc(N_bpf * sizeof(w_double));
@@ -304,6 +308,11 @@ double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int
 		}
 
 		mse = compute_mse(weighted_ref, weighted, length, N_ref, N_bpf);
+		compute_nth_percentile(weighted, N_bpf, centile, length, bpf_centiles);
+		q_mse = 0.0;
+		for (int n = 0; n < length; n++)
+			q_mse += (ref_centiles[n] - bpf_centiles[n]) * (ref_centiles[n] - bpf_centiles[n]);
+		fprintf(BPF_CENTILE_MSE, "%e ", sqrt(q_mse / (double) length));
 		fprintf(RAW_BPF_TIMES, "%e ", elapsed);
 		fprintf(RAW_BPF_KS, "%e ", ks);
 		fprintf(RAW_BPF_MSE, "%e ", mse);
@@ -315,6 +324,8 @@ double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int
 	fprintf(RAW_BPF_MSE, "\n");
 	
 	free(weighted);
+	free(ref_centiles);
+	free(bpf_centiles);
 
 	return mean_elapsed / (double) N_trials;
 
@@ -322,7 +333,6 @@ double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int
 
 
 void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double T, int ** N0s, int * N1s, int N_bpf, int N_trials, w_double ** ml_weighted) {
-
 
 	/* Variables to compute the sample sizes */
 	/* ------------------------------------- */
@@ -337,7 +347,7 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 	int length = hmm->length;
 	int * nxs = (int *) calloc(N_LEVELS, sizeof(int));
 	int * sample_sizes = (int *) malloc(N_LEVELS * sizeof(int));
-	double * sign_ratios = (double *) malloc(length * sizeof(double));
+	double * sign_ratios = (double *) calloc(length, sizeof(double));
 	nxs[N_LEVELS - 1] = hmm->nx;
 
 
@@ -354,12 +364,19 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 		nxs[0] = level0_meshes[i_mesh];
 		printf("Computing the level 0 allocations for nx0 = %d\n", nxs[0]);
 
+		for (int n_alloc = 0; n_alloc < N_ALLOCS; n_alloc++)
+			N0s[i_mesh][n_alloc] = (int) (nxs[1] / (double) nxs[0] * N_bpf);
+		printf("Starting guess for N0:\n");
+		printf("%d\n", N0s[i_mesh][0]);
+		printf("\n");
+
 		for (int n_alloc = 0; n_alloc < N_ALLOCS; n_alloc++) {
 
 			sample_sizes[1] = N1s[n_alloc];
 			printf("N1 = %d\n", N1s[n_alloc]);
 
 			N0 = N_bpf;
+			N0 = N0s[i_mesh][n_alloc];
 			sample_sizes[0] = N0;
 			N0_lo = N0;
 
@@ -410,7 +427,7 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 			else {
 
 				/* Halve the interval until a sufficiently accurate root is found */
-				while (fabs(diff) >= 0.0001) {
+				while (fabs(diff) >= 0.1) {
 					if (diff > 0)
 						N0 = (int) (0.5 * (N0_lo + N0));
 					else {
@@ -463,12 +480,11 @@ double read_sample_sizes(HMM * hmm, int ** N0s, int * N1s, int N_trials) {
 			fscanf(N0s_f, "%d ", &N0s[i_mesh][n_alloc]);
 	}
 
-	for (int n_alloc = 0; n_alloc < N_ALLOCS; n_alloc++)
-		printf("N1[%d] = %d ", n_alloc, N1s[n_alloc]);
-	printf("\n");
 	for (int i_mesh = 0; i_mesh < N_MESHES; i_mesh++) {
+		printf("Level 0 index = %d allocation sizes:\n", i_mesh);
+		printf("************************************\n");
 		for (int n_alloc = 0; n_alloc < N_ALLOCS; n_alloc++)
-			printf("N0[%d] = %d ", n_alloc, N0s[i_mesh][n_alloc]);
+			printf("(N0, N1) = (%d, %d)\n", N0s[i_mesh][n_alloc], N1s[n_alloc]);
 		printf("\n");
 	}
 
@@ -536,6 +552,25 @@ double compute_mse(w_double ** weighted1, w_double ** weighted2, int length, int
 }
 
 
+void compute_nth_percentile(w_double ** distr, int N, double centile, int length, double * centiles) {
 
+	/* We first need to ascending sort the distribution by particle value */
+	// for (int n = 0; n < length; n++)
+		// quicksort(distr[n], 0, N - 1);
+
+	/* Now we can find the desired percentile */
+	int i;
+	double x_centile, cum_prob;
+	for (int n = 0; n < length; n++) {
+		i = 0;
+		cum_prob = 0.0;
+		while (cum_prob < centile) {
+			x_centile = distr[n][i].x;
+			cum_prob += distr[n][i].w;
+			i++;
+		}
+		centiles[n] = x_centile;
+	}
+}
 
 

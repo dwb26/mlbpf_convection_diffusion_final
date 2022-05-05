@@ -147,12 +147,14 @@ void random_permuter(int *permutation, int N, gsl_rng *r) {
 
 
 double sigmoid(double x, double a, double b) {
-	return a / (1.0 + exp(-0.01 * M_PI * x)) + b;
+	a -= b;
+	return a / (1.0 + exp(-0.1 * M_PI * x)) + b;
 }
 
 
 double sigmoid_inv(double x, double a, double b) {
-	return log((x - b) / (a + b - x)) / (0.01 * M_PI);
+	a -= b;
+	return log((x - b) / (a + b - x)) / (0.1 * M_PI);
 }
 
 
@@ -291,18 +293,18 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	/* ----- */
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
 	FILE * ML_XHATS = fopen("ml_xhats.txt", "w");
-	FILE * CORRECTIONS = fopen("corrections.txt", "w");
-	FILE * REGRESSION_CURVE = fopen("regression_curve.txt", "w");
-	FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
-	FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
-	FILE * LEVEL1_FINE = fopen("level1_fine.txt", "w");
-	FILE * LEVEL1_COARSE = fopen("level1_coarse.txt", "w");
-	FILE * LEVEL0_COARSE = fopen("level0_coarse.txt", "w");
-	FILE * ML_DISTR = fopen("ml_distr.txt", "w");
-	FILE * SIGNS = fopen("signs.txt", "w");
-	fprintf(REGRESSION_CURVE, "%d\n", mesh_size);
-	fprintf(ML_DISTR, "%d %d %d\n", N0, N1, N_tot);
-	fprintf(SIGNS, "%d %d %d\n", N0, N1, N_tot);
+	// FILE * CORRECTIONS = fopen("corrections.txt", "w");
+	// FILE * REGRESSION_CURVE = fopen("regression_curve.txt", "w");
+	// FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
+	// FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
+	// FILE * LEVEL1_FINE = fopen("level1_fine.txt", "w");
+	// FILE * LEVEL1_COARSE = fopen("level1_coarse.txt", "w");
+	// FILE * LEVEL0_COARSE = fopen("level0_coarse.txt", "w");
+	// FILE * ML_DISTR = fopen("ml_distr.txt", "w");
+	// FILE * SIGNS = fopen("signs.txt", "w");
+	// fprintf(REGRESSION_CURVE, "%d\n", mesh_size);
+	// fprintf(ML_DISTR, "%d %d %d\n", N0, N1, N_tot);
+	// fprintf(SIGNS, "%d %d %d\n", N0, N1, N_tot);
 
 
 
@@ -365,7 +367,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		/*																											 																										 */
 		/* --------------------------------------------------------------------------------------------------------- */
 		if (N1 > 0) {
-			;
+			// ;
 			regression_fit(s_sig, corrections, N0, N1, M_poly, poly_weights, PHI, C, C_inv, MP, C_gsl, p, C_inv_gsl);
 			for (int i = 0; i < N_tot; i++)
 				solns0[i] += poly_eval(s_sig[i], poly_weights, poly_degree);
@@ -373,21 +375,21 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 			// generate_adaptive_artificial_mesh(N_tot, s_sig, mesh_size, s_mesh);
 			// for (int l = 0; l < mesh_size; l++) {
 
-			// 	gsl_vector_memcpy(rho1, rho_init1);
-			// 	gsl_vector_memcpy(rho0, rho_init0);
+				// gsl_vector_memcpy(rho1, rho_init1);
+				// gsl_vector_memcpy(rho0, rho_init0);
 
-			// 	/* Output the regressed correction curve approximation over the artificial particle mesh */
-			// 	fprintf(REGRESSION_CURVE, "%e %e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
+				/* Output the regressed correction curve approximation over the artificial particle mesh */
+				// fprintf(REGRESSION_CURVE, "%e %e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
 
-			// 	/* Output the true correction curve */
-			// 	solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
-			// 	g1 = rho1->data[obs_pos1];
-			// 	solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
-			// 	g0 = rho0->data[obs_pos0];
-			// 	g0 += poly_eval(s_mesh[l], poly_weights, poly_degree);
-			// 	// fprintf(TRUE_CURVE, "%e ", g1 - g0);
-			// 	fprintf(TRUE_CURVE, "%e ", g1);
-			// 	fprintf(TRUE_CURVE0, "%e ", g0);
+				/* Output the true correction curve */
+				// solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
+				// g1 = rho1->data[obs_pos1];
+				// solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
+				// g0 = rho0->data[obs_pos0];
+				// g0 += poly_eval(s_mesh[l], poly_weights, poly_degree);
+				// fprintf(TRUE_CURVE, "%e ", g1 - g0);
+				// fprintf(TRUE_CURVE, "%e ", g1);
+				// fprintf(TRUE_CURVE0, "%e ", g0);
 
 			// }
 			// fprintf(TRUE_CURVE, "\n");
@@ -500,15 +502,15 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 
 	fclose(CURVE_DATA);
 	fclose(ML_XHATS);
-	fclose(CORRECTIONS);
-	fclose(REGRESSION_CURVE);
-	fclose(TRUE_CURVE);
-	fclose(TRUE_CURVE0);
-	fclose(LEVEL1_FINE);
-	fclose(LEVEL1_COARSE);
-	fclose(LEVEL0_COARSE);
-	fclose(ML_DISTR);
-	fclose(SIGNS);
+	// fclose(CORRECTIONS);
+	// fclose(REGRESSION_CURVE);
+	// fclose(TRUE_CURVE);
+	// fclose(TRUE_CURVE0);
+	// fclose(LEVEL1_FINE);
+	// fclose(LEVEL1_COARSE);
+	// fclose(LEVEL0_COARSE);
+	// fclose(ML_DISTR);
+	// fclose(SIGNS);
 
 	free(signs);
 	free(res_signs);
@@ -825,9 +827,9 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 		resample(N, weights, ind, rng);
 		for (int i = 0; i < N; i++)
 			s_res[i] = s[ind[i]];
-		for (int i = 0; i < N; i++)
-			fprintf(BPF_PARTICLES, "%e ", s_res[i]);
-		fprintf(BPF_PARTICLES, "\n");
+		// for (int i = 0; i < N; i++)
+			// fprintf(BPF_PARTICLES, "%e ", s_res[i]);
+		// fprintf(BPF_PARTICLES, "\n");
 		mutate(N, s, s_res, sig_sd, rng, n);
 
 		/* Initial condition update */
