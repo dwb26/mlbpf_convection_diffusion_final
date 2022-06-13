@@ -204,14 +204,13 @@ void solve(int nx, int nt, double dx, double dt, gsl_matrix * B, gsl_vector * rh
 	for (int t = 0; t < nt; t++) {
 
 		/* Set the boundary conditions */
-		rho->data[0] = fabs(s) * exp(-t / (double) nt); ////////
+		rho->data[0] = fabs(s) * exp(-t / (double) nt);
 		rho->data[nx + 1] = rho->data[nx];
 
 		/* Construct the RHS */
 		gsl_blas_dgemv(CblasNoTrans, 1.0, B, rho, 0.0, rho_tilde);
-		for (int n = 0; n < nx + 2; n++) {
-			rho_tilde->data[n] += 2 * rdx_sq * s * s * exp(s * (1 - n * dx)); // s is constant case
-		}
+		for (int n = 0; n < nx + 2; n++)
+			rho_tilde->data[n] += 2 * rdx_sq * exp(s) * n * dx;
 
 		/* Solve for the LHS */
 		gsl_linalg_solve_tridiag(main, upper, lower, rho_tilde, rho);

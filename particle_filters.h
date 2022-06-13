@@ -27,6 +27,8 @@ int weighted_double_cmp(const void * a, const void * b);
 
 void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weighted);
 
+void bootstrap_particle_filter_var_nx(HMM * hmm, int N, gsl_rng * rng, w_double ** weighted, int nx);
+
 void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weighted);
 
 void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_rng * rng, w_double ** ml_weighted, double * sign_ratios);

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-hmm_f = open("hmm_data.txt", "r")
+hmm_f = open("hmm_data_n_data=0.txt", "r")
 curve_data_f = open("curve_data.txt", "r")
 curve_data0_f = open("curve_data0.txt", "r")
 
@@ -10,8 +10,8 @@ length = int(hmm_f.readline())
 signal = np.empty(length)
 sig_sd, obs_sd = list(map(float, hmm_f.readline().split()))
 space_left, space_right = list(map(float, hmm_f.readline().split()))
-nx = 100; nt = 50
-nx0 = 50; nt0 = 50
+nx = 50; nt = 25
+nx0 = 10; nt0 = 25
 curves = np.empty((length * nt, nx))
 curves0 = np.empty((length * nt0, nx0))
 

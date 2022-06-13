@@ -147,13 +147,13 @@ void random_permuter(int *permutation, int N, gsl_rng *r) {
 
 
 double sigmoid(double x, double a, double b) {
-	a -= b;
+	// a -= b;
 	return a / (1.0 + exp(-0.1 * M_PI * x)) + b;
 }
 
 
 double sigmoid_inv(double x, double a, double b) {
-	a -= b;
+	// a -= b;
 	return log((x - b) / (a + b - x)) / (0.1 * M_PI);
 }
 
@@ -197,23 +197,23 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	double space_left = hmm->space_left, space_right = hmm->space_right;
 	double space_length = space_right - space_left;
 	double T_stop = hmm->T_stop;
-	double dx0 = space_length / (double) (nx0 - 1);
 	double dx1 = space_length / (double) (nx1 - 1);
+	double dx0 = space_length / (double) (nx0 - 1);	
 	double dt = T_stop / (double) (nt - 1);
-	double r0 = 0.5 * dt / (dx0 * dx0);
 	double r1 = 0.5 * dt / (dx1 * dx1);
-	double rdx_sq0 = r0 * dx0 * dx0;
+	double r0 = 0.5 * dt / (dx0 * dx0);
 	double rdx_sq1 = r1 * dx1 * dx1;
+	double rdx_sq0 = r0 * dx0 * dx0;	
 	double v = hmm->v;
 	double obs, normaliser, abs_normaliser, x_hat, g0, g1, sign_rat;
-	double a0 = -r0 * (v * dx0 + 1);
-	double b0 = 1 + 2 * r0 + r0 * v * dx0;
-	double c0 = r0 * (v * dx0 + 1);
-	double d0 = 1 - 2 * r0 - r0 * v * dx0;
 	double a1 = -r1 * (v * dx1 + 1);
 	double b1 = 1 + 2 * r1 + r1 * v * dx1;
 	double c1 = r1 * (v * dx1 + 1);
 	double d1 = 1 - 2 * r1 - r1 * v * dx1;
+	double a0 = -r0 * (v * dx0 + 1);
+	double b0 = 1 + 2 * r0 + r0 * v * dx0;
+	double c0 = r0 * (v * dx0 + 1);
+	double d0 = 1 - 2 * r0 - r0 * v * dx0;
 	short * signs = (short *) malloc(N_tot * sizeof(short));
 	short * res_signs = (short *) malloc(N_tot * sizeof(short));
 	long * ind = (long *) malloc(N_tot * sizeof(long));
@@ -223,10 +223,10 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	double * s_res = (double *) malloc(N_tot * sizeof(double));
 	double * weights = (double *) malloc(N_tot * sizeof(double));
 	double * absolute_weights = (double *) malloc(N_tot * sizeof(double));
-	double * solns0 = (double *) malloc(N_tot * sizeof(double));
 	double * solns1 = (double *) malloc(N1 * sizeof(double));
-	double * g0s = (double *) malloc(N1 * sizeof(double));
+	double * solns0 = (double *) malloc(N_tot * sizeof(double));
 	double * g1s = (double *) malloc(N1 * sizeof(double));
+	double * g0s = (double *) malloc(N1 * sizeof(double));	
 	double * corrections = (double *) malloc(N1 * sizeof(double));
 	double * poly_weights = (double *) malloc(M_poly * sizeof(double));
 	double * x_hats = (double *) malloc(length * sizeof(double));
@@ -237,8 +237,8 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	/* ------------- */
 	gsl_interp * rho_interp = gsl_interp_alloc(gsl_interp_linear, nx1 + 2);
 	gsl_interp_accel * acc = gsl_interp_accel_alloc();
-	double * xs0 = construct_space_mesh((nx0 + 2) * sizeof(double), space_left, dx0, nx0);
 	double * xs1 = construct_space_mesh((nx1 + 2) * sizeof(double), space_left, dx1, nx1);
+	double * xs0 = construct_space_mesh((nx0 + 2) * sizeof(double), space_left, dx0, nx0);
 	double * rho_c = (double *) malloc((nx1 + 2) * sizeof(double));
 
 
@@ -251,20 +251,6 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	gsl_matrix * C_gsl = gsl_matrix_alloc(M_poly, M_poly);
 	gsl_permutation * p = gsl_permutation_alloc(M_poly);
 	gsl_matrix * C_inv_gsl = gsl_matrix_alloc(M_poly, M_poly);
-	generate_adaptive_artificial_mesh(N_tot, s, mesh_size, s_mesh);
-
-
-	/* Level 0 Crank-Nicolson matrices */
-	/* ------------------------------- */
-	gsl_vector * lower0 = gsl_vector_calloc(nx0 + 1);
-	gsl_vector * main0 = gsl_vector_calloc(nx0 + 2);
-	gsl_vector * upper0 = gsl_vector_calloc(nx0 + 1);
-	gsl_matrix * B0 = gsl_matrix_calloc(nx0 + 2, nx0 + 2);
-	gsl_vector * rho0 = gsl_vector_calloc(nx0 + 2);
-	gsl_vector * rho_tilde0 = gsl_vector_calloc(nx0 + 2);
-	gsl_vector * rho_init0 = gsl_vector_calloc(nx0 + 2);
-	construct_present_mat(B0, nx0, c0, d0, r0);
-	construct_forward_mat(main0, upper0, lower0, nx0, a0, b0, r0);
 
 
 	/* Level 1 Crank-Nicolson matrices */
@@ -280,11 +266,24 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	construct_forward_mat(main1, upper1, lower1, nx1, a1, b1, r1);
 
 
+	/* Level 0 Crank-Nicolson matrices */
+	/* ------------------------------- */
+	gsl_vector * lower0 = gsl_vector_calloc(nx0 + 1);
+	gsl_vector * main0 = gsl_vector_calloc(nx0 + 2);
+	gsl_vector * upper0 = gsl_vector_calloc(nx0 + 1);
+	gsl_matrix * B0 = gsl_matrix_calloc(nx0 + 2, nx0 + 2);
+	gsl_vector * rho0 = gsl_vector_calloc(nx0 + 2);
+	gsl_vector * rho_tilde0 = gsl_vector_calloc(nx0 + 2);
+	gsl_vector * rho_init0 = gsl_vector_calloc(nx0 + 2);
+	construct_present_mat(B0, nx0, c0, d0, r0);
+	construct_forward_mat(main0, upper0, lower0, nx0, a0, b0, r0);
+
+
 	/* Initial conditions */
 	/* ------------------ */
-	double s0 = hmm->signal[0];
+	double s_init = sigmoid_inv(hmm->signal[0], upper_bound, lower_bound);
 	for (int i = 0; i < N_tot; i++) {
-		s[i] = sigmoid_inv(s0, upper_bound, lower_bound) + gsl_ran_gaussian(rng, sig_sd);
+		s[i] = s_init + gsl_ran_gaussian(rng, sig_sd);
 		res_signs[i] = 1;	
 	}
 
@@ -292,19 +291,16 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	/* Files */
 	/* ----- */
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-	FILE * ML_XHATS = fopen("ml_xhats.txt", "w");
 	// FILE * CORRECTIONS = fopen("corrections.txt", "w");
 	// FILE * REGRESSION_CURVE = fopen("regression_curve.txt", "w");
-	// FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
-	// FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
 	// FILE * LEVEL1_FINE = fopen("level1_fine.txt", "w");
 	// FILE * LEVEL1_COARSE = fopen("level1_coarse.txt", "w");
 	// FILE * LEVEL0_COARSE = fopen("level0_coarse.txt", "w");
 	// FILE * ML_DISTR = fopen("ml_distr.txt", "w");
-	// FILE * SIGNS = fopen("signs.txt", "w");
+	// FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
+	// FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
 	// fprintf(REGRESSION_CURVE, "%d\n", mesh_size);
 	// fprintf(ML_DISTR, "%d %d %d\n", N0, N1, N_tot);
-	// fprintf(SIGNS, "%d %d %d\n", N0, N1, N_tot);
 
 
 
@@ -317,6 +313,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		normaliser = 0.0, abs_normaliser = 0.0;
 		for (int i = 0; i < N_tot; i++)
 			s_sig[i] = sigmoid(s[i], upper_bound, lower_bound);
+
 
 
 
@@ -346,6 +343,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		}
 
 
+
 		/* --------------------------------------------------------------------------------------------------------- */
 		/*																											 																										 */
 		/* Level 0 solutions 																						 																						 */
@@ -367,7 +365,6 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		/*																											 																										 */
 		/* --------------------------------------------------------------------------------------------------------- */
 		if (N1 > 0) {
-			// ;
 			regression_fit(s_sig, corrections, N0, N1, M_poly, poly_weights, PHI, C, C_inv, MP, C_gsl, p, C_inv_gsl);
 			for (int i = 0; i < N_tot; i++)
 				solns0[i] += poly_eval(s_sig[i], poly_weights, poly_degree);
@@ -379,17 +376,17 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 				// gsl_vector_memcpy(rho0, rho_init0);
 
 				/* Output the regressed correction curve approximation over the artificial particle mesh */
-				// fprintf(REGRESSION_CURVE, "%e %e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
+				// fprintf(REGRESSION_CURVE, "%.16e %.16e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
 
 				/* Output the true correction curve */
-				// solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
-				// g1 = rho1->data[obs_pos1];
-				// solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
-				// g0 = rho0->data[obs_pos0];
-				// g0 += poly_eval(s_mesh[l], poly_weights, poly_degree);
-				// fprintf(TRUE_CURVE, "%e ", g1 - g0);
-				// fprintf(TRUE_CURVE, "%e ", g1);
-				// fprintf(TRUE_CURVE0, "%e ", g0);
+			// 	solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
+			// 	g1 = rho1->data[obs_pos1];
+			// 	solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
+			// 	g0 = rho0->data[obs_pos0];
+			// 	g0 += poly_eval(s_mesh[l], poly_weights, poly_degree);
+			// 	// fprintf(TRUE_CURVE, "%.16e ", g1 - g0);
+			// 	fprintf(TRUE_CURVE, "%.16e ", g1);
+			// 	fprintf(TRUE_CURVE0, "%.16e ", g0);
 
 			// }
 			// fprintf(TRUE_CURVE, "\n");
@@ -456,7 +453,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 		// }
 		// for (int i = 0; i < N0; i++)
 			// fprintf(LEVEL0_COARSE, "%e %e\n", s[i], weights[i] / (double) normaliser);
-		x_hat = 0.0, sign_rat = 0.0;
+		x_hat = 0.0;
 		for (int i = 0; i < N_tot; i++) {
 			weights[i] /= normaliser;
 			absolute_weights[i] /= abs_normaliser;
@@ -464,10 +461,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 			ml_weighted[n][i].w = weights[i];
 			x_hat += s_sig[i] * weights[i];
 		}
-		fprintf(ML_XHATS, "%e ", x_hat);
 		x_hats[n] = x_hat;
-		// sign_ratios[n] = sign_rat;
-		// fprintf(SIGNS, "\n");
 		// for (int i = 0; i < N_tot; i++)
 		// 	fprintf(ML_DISTR, "%e %e\n", ml_weighted[n][i].x, ml_weighted[n][i].w);
 
@@ -501,16 +495,14 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	}
 
 	fclose(CURVE_DATA);
-	fclose(ML_XHATS);
 	// fclose(CORRECTIONS);
 	// fclose(REGRESSION_CURVE);
-	// fclose(TRUE_CURVE);
-	// fclose(TRUE_CURVE0);
 	// fclose(LEVEL1_FINE);
 	// fclose(LEVEL1_COARSE);
 	// fclose(LEVEL0_COARSE);
 	// fclose(ML_DISTR);
-	// fclose(SIGNS);
+	// fclose(TRUE_CURVE);
+	// fclose(TRUE_CURVE0);
 
 	free(signs);
 	free(res_signs);
@@ -611,6 +603,147 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 
 	/* Initial conditions */
 	/* ------------------ */
+	for (int i = 0; i < N; i++)
+		s[i] = sigmoid_inv(hmm->signal[0], upper_bound, lower_bound) + gsl_ran_gaussian(rng, sig_sd);
+
+	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
+	FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
+	fprintf(BPF_DISTR, "%d\n", N);
+
+
+
+	/* ---------------------------------------------- Time iterations ---------------------------------------------- */
+	/* ------------------------------------------------------------------------------------------------------------- */
+	for (int n = 0; n < length; n++) {
+
+		/* Read in the observation that the particles will be weighted on */
+		obs = hmm->observations[n];
+		normaliser = 0.0;
+
+
+
+		/* --------------------------------------------------------------------------------------------------------- */
+		/*																											 																										 */
+		/* Weight generation																						 																						 */
+		/*																											 																										 */
+		/* --------------------------------------------------------------------------------------------------------- */
+		for (int i = 0; i < N; i++) {
+
+			s_sig[i] = sigmoid(s[i], upper_bound, lower_bound);
+			gsl_vector_memcpy(rho, rho_init);
+			solve(nx, nt, dx, dt, B, rho, rho_tilde, s_sig[i], rdx_sq, main, upper, lower, CURVE_DATA);
+			weights[i] = gsl_ran_gaussian_pdf(rho->data[obs_pos] - obs, obs_sd);
+			normaliser += weights[i];
+
+		}
+
+
+
+		/* --------------------------------------------------------------------------------------------------------- */
+		/*																											 																										 */
+		/* Normalisation 																							 																							 */
+		/*																											 																										 */
+		/* --------------------------------------------------------------------------------------------------------- */
+		x_hat = 0.0;
+		for (int i = 0; i < N; i++) {
+			weights[i] /= normaliser;
+			weighted[n][i].x = s_sig[i];
+			weighted[n][i].w = weights[i];
+			x_hat += s_sig[i] * weights[i];
+		}
+		x_hats[n] = x_hat;
+		// for (int i = 0; i < N; i++)
+		// 	fprintf(BPF_DISTR, "%e %e\n", weighted[n][i].x, weighted[n][i].w);
+
+
+
+		/* --------------------------------------------------------------------------------------------------------- */
+		/*																											 																										 */
+		/* Resample and mutate 																						 																					 */
+		/*																											 																										 */
+		/* --------------------------------------------------------------------------------------------------------- */
+		resample(N, weights, ind, rng);
+		for (int i = 0; i < N; i++)
+			s_res[i] = s[ind[i]];
+		mutate(N, s, s_res, sig_sd, rng, n);
+
+		/* Initial condition update */
+		solve(nx, nt, dx, dt, B, rho_init, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
+
+	}
+
+	fclose(CURVE_DATA);
+	fclose(BPF_DISTR);
+
+	free(ind);
+	free(s);
+	free(s_sig);
+	free(s_res);
+	free(weights);
+	free(x_hats);
+
+	gsl_vector_free(lower);
+	gsl_vector_free(main);
+	gsl_vector_free(upper);
+	gsl_matrix_free(B);
+	gsl_vector_free(rho);
+	gsl_vector_free(rho_tilde);
+	gsl_vector_free(rho_init);
+
+}
+
+
+void bootstrap_particle_filter_var_nx(HMM * hmm, int N, gsl_rng * rng, w_double ** weighted, int nx) {
+
+	
+	/* --------------------------------------------------- Setup --------------------------------------------------- */
+	/* ------------------------------------------------------------------------------------------------------------- */
+
+	/* General parameters */
+	/* ------------------ */
+	int length = hmm->length;
+	int nt = hmm->nt;
+	int obs_pos = nx;
+	double sig_sd = hmm->sig_sd;
+	double obs_sd = hmm->obs_sd;
+	double upper_bound = hmm->upper_bound, lower_bound = hmm->lower_bound;
+	double space_left = hmm->space_left, space_right = hmm->space_right;
+	double T_stop = hmm->T_stop;	
+	double dx = (space_right - space_left) / (double) (nx - 1);
+	double dt = T_stop / (double) (nt - 1);
+	double r = 0.5 * dt / (dx * dx);
+	double rdx_sq = r * dx * dx;
+	double v = hmm->v;
+	double obs, normaliser, x_hat;
+	double a = -r * (v * dx + 1);
+	double b = 1 + 2 * r + r * v * dx;
+	double c = r * (v * dx + 1);
+	double d = 1 - 2 * r - r * v * dx;
+	size_t size = nx * sizeof(double);
+	long * ind = (long *) malloc(N * sizeof(long));
+	double * s = (double *) malloc(N * sizeof(double));
+	double * s_sig = (double *) malloc(N * sizeof(double));
+	double * s_res = (double *) malloc(N * sizeof(double));
+	double * weights = (double *) malloc(N * sizeof(double));
+	double * x_hats = (double *) malloc(length * sizeof(double));
+
+
+	/* Crank-Nicolson matrices */
+	/* ----------------------- */
+	/* Construct the forward time matrix */
+	gsl_vector * lower = gsl_vector_alloc(nx + 1);
+	gsl_vector * main = gsl_vector_alloc(nx + 2);
+	gsl_vector * upper = gsl_vector_alloc(nx + 1);
+	gsl_matrix * B = gsl_matrix_calloc(nx + 2, nx + 2);
+	gsl_vector * rho = gsl_vector_calloc(nx + 2);
+	gsl_vector * rho_tilde = gsl_vector_calloc(nx + 2);
+	gsl_vector * rho_init = gsl_vector_calloc(nx + 2);
+	construct_present_mat(B, nx, c, d, r);
+	construct_forward_mat(main, upper, lower, nx, a, b, r);
+
+
+	/* Initial conditions */
+	/* ------------------ */
 	double s0 = hmm->signal[0];
 	for (int i = 0; i < N; i++)
 		s[i] = sigmoid_inv(s0, upper_bound, lower_bound) + gsl_ran_gaussian(rng, sig_sd);
@@ -664,7 +797,7 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 		}
 		x_hats[n] = x_hat;
 		fprintf(X_HATS, "%e ", x_hat);
-		// printf("n = %d, x_hat = %lf\n", n, x_hat);
+		// printf("n = %d, x_hat = %lf, sig = %lf\n", n, x_hat, hmm->signal[n]);
 		// for (int i = 0; i < N; i++)
 		// 	fprintf(BPF_DISTR, "%e %e\n", weighted[n][i].x, weighted[n][i].w);
 
@@ -681,8 +814,7 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 		mutate(N, s, s_res, sig_sd, rng, n);
 
 		/* Initial condition update */
-		solve(nx, nt, dx, dt, B, rho, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
-		gsl_vector_memcpy(rho_init, rho);
+		solve(nx, nt, dx, dt, B, rho_init, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
 
 	}
 
@@ -706,6 +838,7 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 	gsl_vector_free(rho_init);
 
 }
+
 
 
 void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weighted) {
@@ -769,7 +902,6 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
 	FILE * BPF_PARTICLES = fopen("bpf_particles.txt", "w");
 	FILE * NORMALISERS = fopen("normalisers.txt", "w");
-	FILE * X_HATS = fopen("x_hats.txt", "w");
 	FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
 	fprintf(BPF_PARTICLES, "%d %d\n", length, N);
 
@@ -814,7 +946,7 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 			x_hat += s_sig[i] * weights[i];
 		}
 		x_hats[n] = x_hat;
-		fprintf(X_HATS, "%e ", x_hat);
+		// fprintf(X_HATS, "%e ", x_hat);
 		printf("ref xhat(%d) = %lf\n", n, x_hat);
 
 
@@ -833,15 +965,14 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 		mutate(N, s, s_res, sig_sd, rng, n);
 
 		/* Initial condition update */
-		solve(nx, nt, dx, dt, B, rho, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
-		gsl_vector_memcpy(rho_init, rho);
+		solve(nx, nt, dx, dt, B, rho_init, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
+		// solve(nx, nt, dx, dt, B, rho_init, rho_tilde, hmm->signal[n], rdx_sq, main, upper, lower, CURVE_DATA);
 
 	}
 
 	fclose(CURVE_DATA);
 	fclose(BPF_PARTICLES);
 	fclose(NORMALISERS);
-	fclose(X_HATS);
 	fclose(BPF_DISTR);	
 
 	free(ind);

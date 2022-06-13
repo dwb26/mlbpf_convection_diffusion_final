@@ -16,7 +16,7 @@
 
 /// This is the convection model
 
-void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_double ** weighted_ref, int N_ref, int N_trials, int N_bpf, int * level0_meshes, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, w_double ** ml_weighted)  {
+double equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_double ** weighted_ref, int N_ref, int N_trials, int N_bpf, int * level0_meshes, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, w_double ** ml_weighted, FILE * BPF_CENTILE_MSE, FILE * REF_XHATS, FILE * BPF_XHATS, int rng_counter)  {
 
 	int run_ref = 1;		// REF ON
 	// int run_ref = 0;		// REF OFF
@@ -24,8 +24,11 @@ void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_dou
 	/* Reference distribution */
 	/* ---------------------- */
 	/* Produce the benchmark reference distribution with the BPF. Set run_ref to 0 if the reference data already esists */
-	if (run_ref == 1)
+	if (run_ref == 1) {
 		run_reference_filter(hmm, N_ref, rng, weighted_ref, n_data);
+		rng_counter++;
+		gsl_rng_set(rng, rng_counter);
+	}
 	else
 		read_cdf(weighted_ref, hmm, n_data);
 
@@ -34,10 +37,12 @@ void equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_dou
 	/* ----------------- */
 	/* Run the BPF with a set number of particles N_bpf < N_ref and record the accuracy and the mean time taken. Then for each mesh configuration, increment the level 1 particle allocation and compute the level 0 particle allocation so that the time taken for the MLBPF is roughly the same as the BPF */
 	double T, T_temp;
-	T = perform_BPF_trials(hmm, N_bpf, rng, N_trials, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE);
+	T = perform_BPF_trials(hmm, N_bpf, rng, N_trials, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE, BPF_CENTILE_MSE, REF_XHATS, BPF_XHATS, rng_counter);
 	if (n_data == 0)
 		compute_sample_sizes(hmm, rng, level0_meshes, T, N0s, N1s, N_bpf, N_trials, ml_weighted);
 	T_temp = read_sample_sizes(hmm, N0s, N1s, N_trials);
+
+	return T;
 	
 }
 
@@ -48,8 +53,10 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	double sig_sd = 2.5;
-	double obs_sd = 30.0;
+	// double sig_sd = 2.5;
+	double sig_sd = 0.1;
+	// double obs_sd = 1.25;
+	double obs_sd = 2.5;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
@@ -71,22 +78,13 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	gsl_vector * rho_tilde = gsl_vector_calloc(nx + 2);
 
 	/* Write the available parameters */
-	FILE * DATA = fopen("hmm_data.txt", "w");
+	char n_data_str[50], hmm_file_name[200];
+	snprintf(n_data_str, 50, "%d", n_data);
+	sprintf(hmm_file_name, "hmm_data_n_data=%s.txt", n_data_str);
+	FILE * DATA_OUT = fopen(hmm_file_name, "w");
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-	fprintf(DATA, "%d\n", length);
-	fprintf(DATA, "%lf %lf\n", sig_sd, obs_sd);
-	fprintf(DATA, "%lf %lf\n", space_left, space_right);
-	fprintf(DATA, "%d %d\n", nx, nt);
-	fprintf(DATA, "%lf\n", T_stop);
-	fprintf(DATA, "%e\n", v);
-	fprintf(DATA, "%e\n", 1.5);
-	fprintf(DATA, "%lf %lf\n", upper_bound, lower_bound);
-
-	int N = 100;
-	double EY, varY, top_varY = 0.0;
-	double * thetas = (double *) malloc(N * sizeof(double));
-	double * solns = (double *) malloc(N * sizeof(double));
-	gsl_rng * rng0 = gsl_rng_alloc(gsl_rng_taus);
+	FILE * TRUE_CURVES = fopen("true_curves.txt", "w");
+	output_hmm_parameters(DATA_OUT, length, sig_sd, obs_sd, space_left, space_right, nx, nt, T_stop, v, upper_bound, lower_bound);
 
 	/* Generate the data */
 	s = sigmoid_inv(s_sig, upper_bound, lower_bound);
@@ -97,31 +95,16 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 		s_sig = sigmoid(s, upper_bound, lower_bound);
 		solve(nx, nt, dx, dt, B, rho, rho_tilde, s_sig, rdx_sq, main, upper, lower, CURVE_DATA);
 		obs = rho->data[obs_pos] + gsl_ran_gaussian(rng, obs_sd);
-		fprintf(DATA, "%e %e\n", s_sig, obs);
-		double true_soln = rho->data[obs_pos];
-
-		// EY = 0.0, varY = 0.0;
-		// for (int i = 0; i < N; i++) {
-		// 	thetas[i] = 0.9999 * s + gsl_ran_gaussian(rng0, sig_sd);
-		// 	double sig_theta = sigmoid(thetas[i], upper_bound, lower_bound);
-		// 	solve(nx, nt, dx, dt, B, rho, rho_tilde, sig_theta, rdx_sq, main, upper, lower, CURVE_DATA);
-		// 	solns[i] = rho->data[obs_pos];
-		// 	EY += solns[i] / (double) N;
-		// }
-		// for (int i = 0; i < N; i++)
-		// 	varY += (solns[i] - EY) * (solns[i] - EY);
-		// varY = sqrt(varY / (double) (N - 1));
-		// top_varY += varY;
-		// printf("(signal, true obs, sample_mean, sample_obs_sd) = (%lf, %lf, %lf, %lf)\n", s, true_soln, EY, varY);
+		fprintf(DATA_OUT, "%.16e %.16e\n", s_sig, obs);
 
 		/* Evolve the signal with the mutation model */
 		s = 0.9999 * s + gsl_ran_gaussian(rng, sig_sd);
 
 	}
-	printf("Average observation stds = %lf\n", top_varY / (double) length);
 
 	fclose(CURVE_DATA);
-	fclose(DATA);
+	fclose(DATA_OUT);
+	fclose(TRUE_CURVES);
 	fflush(stdout);
 
 	gsl_vector_free(lower);
@@ -130,12 +113,30 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	gsl_matrix_free(B);
 	gsl_vector_free(rho);
 	gsl_vector_free(rho_tilde);
-	gsl_rng_free(rng0);
-	free(thetas);
-	free(solns);
+
+	read_hmm_data(hmm_file_name, hmm, n_data);
+
+}
+
+
+void output_hmm_parameters(FILE * DATA_OUT, int length, double sig_sd, double obs_sd, double space_left, double space_right, int nx, int nt, double T_stop, double v, double upper_bound, double lower_bound) {
+
+	fprintf(DATA_OUT, "%d\n", length);
+	fprintf(DATA_OUT, "%lf %lf\n", sig_sd, obs_sd);
+	fprintf(DATA_OUT, "%lf %lf\n", space_left, space_right);
+	fprintf(DATA_OUT, "%d %d\n", nx, nt);
+	fprintf(DATA_OUT, "%lf\n", T_stop);
+	fprintf(DATA_OUT, "%e\n", v);
+	fprintf(DATA_OUT, "%e\n", 1.5);
+	fprintf(DATA_OUT, "%lf %lf\n", upper_bound, lower_bound);
+
+}
+
+
+void read_hmm_data(char hmm_file_name[200], HMM * hmm, int n_data) {
 
 	/* Read in the data from the file */
-	FILE * DATA_IN = fopen("hmm_data.txt", "r");
+	FILE * DATA_IN = fopen(hmm_file_name, "r");
 	fscanf(DATA_IN, "%d\n", &hmm->length);
 	fscanf(DATA_IN, "%lf %lf\n", &hmm->sig_sd, &hmm->obs_sd);
 	fscanf(DATA_IN, "%lf %lf\n", &hmm->space_left, &hmm->space_right);
@@ -150,7 +151,7 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 		fscanf(DATA_IN, "%lf %lf\n", &hmm->signal[n], &hmm->observations[n]);
 	fclose(DATA_IN);
 
-	printf("DATA SET %d\n", n_data);
+	printf("DATA SET %d\n", n_data + 1);
 	printf("Data length 	             = %d\n", hmm->length);
 	printf("sig_sd      	             = %lf\n", hmm->sig_sd);
 	printf("obs_sd      	             = %lf\n", hmm->obs_sd);
@@ -171,19 +172,21 @@ void generate_hmm_0(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, in
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	double sig_sd = 0.5;
-	double obs_sd = 0.85;
+	double sig_sd = 0.1;
+	double obs_sd = 1.25;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
 	double dt = T_stop / (double) (nt - 1);
 	double r = 0.5 * dt / (dx * dx);
 	double rdx_sq = r * dx * dx;
-	double v = 15.0;
+	double s = 5.0, obs, v = 15.0;
 	double a = -r * (v * dx + 1);
 	double b = 1 + 2 * r + r * v * dx;
 	double c = r * (v * dx + 1);
 	double d = 1 - 2 * r - r * v * dx;
+	double lower_bound = 6.0, upper_bound = 8.0;
+	double s_sig = 7.0;
 	gsl_vector * lower = gsl_vector_calloc(nx + 1);
 	gsl_vector * main = gsl_vector_calloc(nx + 2);
 	gsl_vector * upper = gsl_vector_calloc(nx + 1);
@@ -246,10 +249,10 @@ void output_cdf(w_double ** w_particles, HMM * hmm, int N, char file_name[200]) 
 
 	for (int n = 0; n < hmm->length; n++) {
 		for (int i = 0; i < N; i++)
-			fprintf(data, "%e ", w_particles[n][i].x);
+			fprintf(data, "%.16e ", w_particles[n][i].x);
 		fprintf(data, "\n");
 		for (int i = 0; i < N; i++)
-			fprintf(data, "%e ", w_particles[n][i].w);
+			fprintf(data, "%.16e ", w_particles[n][i].w);
 		fprintf(data, "\n");
 	}
 	fclose(data);
@@ -268,18 +271,92 @@ void read_cdf(w_double ** w_particles, HMM * hmm, int n_data) {
 	sprintf(ref_name, "ref_particles_sig_sd=%s_obs_sd=%s_len=%s_s0=%s_n_data=%s.txt", sig_sd_str, obs_sd_str, len_str, s0_str, n_data_str);
 	FILE * data = fopen(ref_name, "r");
 	fscanf(data, "%d %d\n", &N, &length);
-	printf("N = %d, length = %d\n", N, length);
+
 	for (int n = 0; n < length; n++) {
 		for (int i = 0; i < N; i++)
-			fscanf(data, "%lf ", &w_particles[n][i].x);
+			fscanf(data, "%le ", &w_particles[n][i].x);
 		for (int i = 0; i < N; i++)
-			fscanf(data, "%lf ", &w_particles[n][i].w);
+			fscanf(data, "%le ", &w_particles[n][i].w);
 	}
 	fclose(data);
 }
 
 
-double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int N_ref, w_double ** weighted_ref, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, FILE * BPF_CENTILE_MSE) {
+double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int N_ref, w_double ** weighted_ref, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, FILE * BPF_CENTILE_MSE, FILE * REF_XHATS, FILE * BPF_XHATS, int rng_counter) {
+
+	int length = hmm->length;
+	double ks, elapsed = 0.0, mse = 0.0, mean_elapsed = 0.0, q_mse = 0.0, ref_xhat = 0.0, bpf_xhat = 0.0, centile = 0.95;
+	double * ref_centiles = (double *) malloc(length * sizeof(double));
+	compute_nth_percentile(weighted_ref, N_ref, centile, length, ref_centiles);
+	double * bpf_centiles = (double *) malloc(length * sizeof(double));
+	w_double ** weighted = (w_double **) malloc(length * sizeof(w_double *));
+	for (int n = 0; n < length; n++)
+		weighted[n] = (w_double *) malloc(N_bpf * sizeof(w_double));
+
+	/* Write out the current data set reference x_hats */
+	for (int n = 0; n < length; n++) {
+		ref_xhat = 0.0;
+		for (int i = 0; i < N_ref; i++)
+			ref_xhat += weighted_ref[n][i].w * weighted_ref[n][i].x;
+		fprintf(REF_XHATS, "%.16e ", ref_xhat);
+	}
+	fprintf(REF_XHATS, "\n");
+
+	printf("Running BPF trials...\n");
+	for (int n_trial = 0; n_trial < N_trials; n_trial++) {
+
+		/* Run the simulation for the BPF */
+		clock_t bpf_timer = clock();
+		bootstrap_particle_filter(hmm, N_bpf, rng, weighted);
+		elapsed = (double) (clock() - bpf_timer) / (double) CLOCKS_PER_SEC;
+		mean_elapsed += elapsed;
+		rng_counter++;
+		gsl_rng_set(rng, rng_counter);
+
+
+		/* Trial analysis */
+		/* -------------- */
+		ks = 0.0;
+		for (int n = 0; n < length; n++) {
+
+			/* Compute the KS statistic for the run */
+			qsort(weighted[n], N_bpf, sizeof(w_double), weighted_double_cmp);
+			ks += ks_statistic(N_ref, weighted_ref[n], N_bpf, weighted[n]) / (double) length;
+
+			/* Compute the BPF mean estimate for the trial */
+			bpf_xhat = 0.0;
+			for (int i = 0; i < N_bpf; i++)
+				bpf_xhat += weighted[n][i].w * weighted[n][i].x;
+			fprintf(BPF_XHATS, "%.16e ", bpf_xhat);
+		}
+		fprintf(BPF_XHATS, "\n");
+
+		mse = compute_mse(weighted_ref, weighted, length, N_ref, N_bpf);
+		compute_nth_percentile(weighted, N_bpf, centile, length, bpf_centiles);
+		q_mse = 0.0;
+		for (int n = 0; n < length; n++)
+			q_mse += (ref_centiles[n] - bpf_centiles[n]) * (ref_centiles[n] - bpf_centiles[n]);
+		fprintf(BPF_CENTILE_MSE, "%.16e ", sqrt(q_mse / (double) length));
+		fprintf(RAW_BPF_TIMES, "%.16e ", elapsed);
+		fprintf(RAW_BPF_KS, "%.16e ", ks);
+		fprintf(RAW_BPF_MSE, "%.16e ", mse);
+
+	}
+
+	fprintf(RAW_BPF_TIMES, "\n");
+	fprintf(RAW_BPF_KS, "\n");
+	fprintf(RAW_BPF_MSE, "\n");
+	
+	free(weighted);
+	free(ref_centiles);
+	free(bpf_centiles);
+
+	return mean_elapsed / (double) N_trials;
+
+}
+
+
+double perform_BPF_trials_var_nx(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int N_ref, w_double ** weighted_ref, int n_data, FILE * RAW_BPF_TIMES, FILE * RAW_BPF_KS, FILE * RAW_BPF_MSE, FILE * BPF_CENTILE_MSE, int nx) {
 
 	int length = hmm->length;
 	double centile = 0.95;
@@ -289,14 +366,13 @@ double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int
 	double * bpf_centiles = (double *) malloc(length * sizeof(double));
 	w_double ** weighted = (w_double **) malloc(length * sizeof(w_double *));
 	for (int n = 0; n < length; n++)
-		weighted[n] = (w_double *) malloc(N_bpf * sizeof(w_double));
+		weighted[n] = (w_double *) malloc(N_ref * sizeof(w_double));
 
-	printf("Running BPF trials...\n");
 	for (int n_trial = 0; n_trial < N_trials; n_trial++) {
 
 		/* Run the simulation for the BPF */
 		clock_t bpf_timer = clock();
-		bootstrap_particle_filter(hmm, N_bpf, rng, weighted);
+		bootstrap_particle_filter_var_nx(hmm, N_bpf, rng, weighted, nx);
 		elapsed = (double) (clock() - bpf_timer) / (double) CLOCKS_PER_SEC;
 		mean_elapsed += elapsed;
 
@@ -312,10 +388,10 @@ double perform_BPF_trials(HMM * hmm, int N_bpf, gsl_rng * rng, int N_trials, int
 		q_mse = 0.0;
 		for (int n = 0; n < length; n++)
 			q_mse += (ref_centiles[n] - bpf_centiles[n]) * (ref_centiles[n] - bpf_centiles[n]);
-		fprintf(BPF_CENTILE_MSE, "%e ", sqrt(q_mse / (double) length));
-		fprintf(RAW_BPF_TIMES, "%e ", elapsed);
-		fprintf(RAW_BPF_KS, "%e ", ks);
-		fprintf(RAW_BPF_MSE, "%e ", mse);
+		fprintf(BPF_CENTILE_MSE, "%.16e ", sqrt(q_mse / (double) length));
+		fprintf(RAW_BPF_TIMES, "%.16e ", elapsed);
+		fprintf(RAW_BPF_KS, "%.16e ", ks);
+		fprintf(RAW_BPF_MSE, "%.16e ", mse);
 
 	}
 
@@ -354,7 +430,7 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 	/* Variables for printing to file */
 	/* ------------------------------ */
 	FILE * N0s_f = fopen("N0s_data.txt", "w");
-	fprintf(N0s_f, "%d %e\n", N_bpf, T);
+	fprintf(N0s_f, "%d %.16e\n", N_bpf, T);
 
 
 	/* Compute the particle allocations */
@@ -468,6 +544,76 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 }
 
 
+int compute_sample_sizes_bpf(HMM * hmm, gsl_rng * rng, double T, int nx, w_double ** weighted) {
+
+	/**
+	 * 
+	 * In this function we compute the N_bpf required to run the BPF for the same as T(nx1), given nx < nx1.
+	 * 
+	 * */
+
+	int N_lo = 500, N_hi = 3000, N_bpf;
+	clock_t timer;
+	int length = hmm->length;
+	double T_lo, T_hi, T_bpf, diff;
+
+	/* Make sure we find a low sample size for which we know the root is greater than */
+	timer = clock();
+	bootstrap_particle_filter_var_nx(hmm, N_lo, rng, weighted, nx);
+	T_lo = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+	diff = (T_lo - T) / T;
+	while (diff > 0) {
+		T_lo = (int) (0.5 * T_lo);
+		timer = clock();
+		bootstrap_particle_filter_var_nx(hmm, N_lo, rng, weighted, nx);
+		T_lo = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+		diff = (T_lo - T) / T;
+	}
+
+	/* Make sure we find a low sample size for which we know the root is less than */
+	timer = clock();
+	bootstrap_particle_filter_var_nx(hmm, N_hi, rng, weighted, nx);
+	T_hi = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+	diff = (T_hi - T) / T;
+	while (diff < 0) {
+		T_hi = (int) (2 * T_hi);
+		timer = clock();
+		bootstrap_particle_filter_var_nx(hmm, N_hi, rng, weighted, nx);
+		T_hi = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+		diff = (T_hi - T) / T;
+	}
+
+	/* Find the root N_bpf in between [N_lo, N_hi] */
+	N_bpf = (int) (0.5 * (N_lo + N_hi));
+	timer = clock();
+	bootstrap_particle_filter_var_nx(hmm, N_bpf, rng, weighted, nx);
+	T_bpf = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+	diff = (T_bpf - T) / T;
+	while (fabs(diff) >= 0.01) {
+		if (diff > 0) {
+			N_hi = N_bpf;
+			N_bpf = (int) (0.5 * (N_lo + N_hi));
+			timer = clock();
+			bootstrap_particle_filter_var_nx(hmm, N_bpf, rng, weighted, nx);
+			T_bpf = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+			diff = (T_bpf - T) / T;
+		}			
+		else {
+			N_lo = N_bpf;
+			N_bpf = (int) (0.5 * (N_lo + N_hi));
+			timer = clock();
+			bootstrap_particle_filter_var_nx(hmm, N_bpf, rng, weighted, nx);
+			T_bpf = (double) (clock() - timer) / (double) CLOCKS_PER_SEC;
+			diff = (T_bpf - T) / T;
+		}
+		if (N_lo == N_hi)
+			diff = 0.0;
+	}
+
+	return N_bpf;
+}
+
+
 double read_sample_sizes(HMM * hmm, int ** N0s, int * N1s, int N_trials) {
 
 	int N_bpf;
@@ -554,10 +700,6 @@ double compute_mse(w_double ** weighted1, w_double ** weighted2, int length, int
 
 void compute_nth_percentile(w_double ** distr, int N, double centile, int length, double * centiles) {
 
-	/* We first need to ascending sort the distribution by particle value */
-	// for (int n = 0; n < length; n++)
-		// quicksort(distr[n], 0, N - 1);
-
 	/* Now we can find the desired percentile */
 	int i;
 	double x_centile, cum_prob;
@@ -573,4 +715,19 @@ void compute_nth_percentile(w_double ** distr, int N, double centile, int length
 	}
 }
 
+
+
+		// EY = 0.0, varY = 0.0;
+		// for (int i = 0; i < N; i++) {
+		// 	thetas[i] = 0.9999 * s + gsl_ran_gaussian(rng0, sig_sd);
+		// 	double sig_theta = sigmoid(thetas[i], upper_bound, lower_bound);
+		// 	solve(nx, nt, dx, dt, B, rho, rho_tilde, sig_theta, rdx_sq, main, upper, lower, CURVE_DATA);
+		// 	solns[i] = rho->data[obs_pos];
+		// 	EY += solns[i] / (double) N;
+		// }
+		// for (int i = 0; i < N; i++)
+		// 	varY += (solns[i] - EY) * (solns[i] - EY);
+		// varY = sqrt(varY / (double) (N - 1));
+		// top_varY += varY;
+		// printf("(signal, true obs, sample_mean, sample_obs_sd) = (%lf, %lf, %lf, %lf)\n", s, true_soln, EY, varY);
 
