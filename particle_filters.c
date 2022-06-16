@@ -147,13 +147,13 @@ void random_permuter(int *permutation, int N, gsl_rng *r) {
 
 
 double sigmoid(double x, double a, double b) {
-	// a -= b;
+	a -= b;
 	return a / (1.0 + exp(-0.1 * M_PI * x)) + b;
 }
 
 
 double sigmoid_inv(double x, double a, double b) {
-	// a -= b;
+	a -= b;
 	return log((x - b) / (a + b - x)) / (0.1 * M_PI);
 }
 

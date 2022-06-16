@@ -38,8 +38,8 @@ double equal_runtimes_model(gsl_rng * rng, HMM * hmm, int ** N0s, int * N1s, w_d
 	/* Run the BPF with a set number of particles N_bpf < N_ref and record the accuracy and the mean time taken. Then for each mesh configuration, increment the level 1 particle allocation and compute the level 0 particle allocation so that the time taken for the MLBPF is roughly the same as the BPF */
 	double T, T_temp;
 	T = perform_BPF_trials(hmm, N_bpf, rng, N_trials, N_ref, weighted_ref, n_data, RAW_BPF_TIMES, RAW_BPF_KS, RAW_BPF_MSE, BPF_CENTILE_MSE, REF_XHATS, BPF_XHATS, rng_counter);
-	if (n_data == 0)
-		compute_sample_sizes(hmm, rng, level0_meshes, T, N0s, N1s, N_bpf, N_trials, ml_weighted);
+	// if (n_data == 0)
+		// compute_sample_sizes(hmm, rng, level0_meshes, T, N0s, N1s, N_bpf, N_trials, ml_weighted);
 	T_temp = read_sample_sizes(hmm, N0s, N1s, N_trials);
 
 	return T;
@@ -53,8 +53,9 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	// double sig_sd = 2.5;
-	double sig_sd = 0.1;
+	// double sig_sd = 1.0;
+	// double sig_sd = 0.1;
+	double sig_sd = 0.25;
 	// double obs_sd = 1.25;
 	double obs_sd = 2.5;
 	double space_left = 0.0, space_right = 1.0;
@@ -68,8 +69,9 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	double b = 1 + 2 * r + r * v * dx;
 	double c = r * (v * dx + 1);
 	double d = 1 - 2 * r - r * v * dx;
-	double lower_bound = 6.0, upper_bound = 8.0;
-	double s_sig = 7.0;
+	// double lower_bound = 6.0, upper_bound = 9.0;
+	double lower_bound = 5.0, upper_bound = 7.5;
+	double s_sig = 6.75;
 	gsl_vector * lower = gsl_vector_calloc(nx + 1);
 	gsl_vector * main = gsl_vector_calloc(nx + 2);
 	gsl_vector * upper = gsl_vector_calloc(nx + 1);
@@ -503,7 +505,7 @@ void compute_sample_sizes(HMM * hmm, gsl_rng * rng, int * level0_meshes, double 
 			else {
 
 				/* Halve the interval until a sufficiently accurate root is found */
-				while (fabs(diff) >= 0.1) {
+				while (fabs(diff) >= 0.05) {
 					if (diff > 0)
 						N0 = (int) (0.5 * (N0_lo + N0));
 					else {

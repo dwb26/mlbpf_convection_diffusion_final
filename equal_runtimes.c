@@ -45,12 +45,13 @@ int main(void) {
 
 	/* Main experiment parameters */
 	/* -------------------------- */
-	int N_data = 3;
+	int N_data = 1;
 	int N_trials = 25;
-	int length = 10;
+	int length = 50;
 	int nx = 50;
 	int nt = 25;
 	int N_ref = 500000;
+	// int N_ref = 2500;
 	// int N_bpf = 1000;
 	int N_bpf = 2500;
 	// int level0_meshes[N_MESHES] = { 80, 60, 40, 20, 10, 5 };
