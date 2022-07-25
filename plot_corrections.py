@@ -90,7 +90,7 @@ if shaded_obs_plot:
 	obs_disc = 250
 	dx_obs = 3 * obs_sd / (obs_disc - 1)
 	fig, axs = plt.subplots(2, 4, figsize=(12, 9))
-	for k in range(length):
+	for k in range(8):
 
 		# Plot the solution curves
 		axs[i, k % 4].plot(sig_theta_mesh[k], true_curve[k], label=r"$\varphi^1$")

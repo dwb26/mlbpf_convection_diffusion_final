@@ -53,11 +53,10 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	Generates the HMM data and outputs to file to be read in by read_hmm.
 	*/
 	int obs_pos = nx;
-	// double sig_sd = 1.0;
-	// double sig_sd = 0.1;
-	double sig_sd = 0.25;
-	// double obs_sd = 1.25;
-	double obs_sd = 2.5;
+	double sig_sd = 0.1;
+	// double obs_sd = 0.5;
+	// double obs_sd = 1.0;
+	double obs_sd = 2.0;
 	double space_left = 0.0, space_right = 1.0;
 	double T_stop = 0.05;
 	double dx = (space_right - space_left) / (double) (nx - 1);
@@ -70,8 +69,9 @@ void generate_hmm(gsl_rng * rng, HMM * hmm, int n_data, int length, int nx, int 
 	double c = r * (v * dx + 1);
 	double d = 1 - 2 * r - r * v * dx;
 	// double lower_bound = 6.0, upper_bound = 9.0;
-	double lower_bound = 5.0, upper_bound = 7.5;
-	double s_sig = 6.75;
+	// double lower_bound = 5.0, upper_bound = 7.5;
+	double lower_bound = 2.5, upper_bound = 7.5;
+	double s_sig = 5.00;
 	gsl_vector * lower = gsl_vector_calloc(nx + 1);
 	gsl_vector * main = gsl_vector_calloc(nx + 2);
 	gsl_vector * upper = gsl_vector_calloc(nx + 1);

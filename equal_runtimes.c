@@ -15,8 +15,8 @@
 
 const int N_TOTAL_MAX = 100000000;
 const int N_LEVELS = 2;
-const int N_MESHES = 5;
-const int N_ALLOCS = 7;
+const int N_MESHES = 6;
+const int N_ALLOCS = 6;
 // const int N_MESHES = 1;
 // const int N_ALLOCS = 1;
 
@@ -47,19 +47,19 @@ int main(void) {
 	/* -------------------------- */
 	int N_data = 1;
 	int N_trials = 25;
-	int length = 50;
-	int nx = 50;
+	int length = 25;
+	int nx = 100;
 	int nt = 25;
-	int N_ref = 500000;
+	int N_ref = 100000;
+	// int N_ref = 50000;
 	// int N_ref = 2500;
-	// int N_bpf = 1000;
-	int N_bpf = 2500;
-	// int level0_meshes[N_MESHES] = { 80, 60, 40, 20, 10, 5 };
-	int level0_meshes[N_MESHES] = { 40, 30, 20, 10, 5 };
-	// int N1s[N_ALLOCS] = { 0, 50, 100, 150, 200, 240 };
-	// int N1s[N_ALLOCS] = { 0, 50, 100, 250, 500, 750 };
-	int N1s[N_ALLOCS] = { 0, 50, 100, 250, 500, 1000, 2000 };
-	// int level0_meshes[N_MESHES] = { 5 };
+	int N_bpf = 1000;
+	// int N_bpf = 2500;
+	int level0_meshes[N_MESHES] = { 80, 60, 40, 20, 10, 5 };
+	// int level0_meshes[N_MESHES] = { 40, 30, 20, 10, 5 };
+	int N1s[N_ALLOCS] = { 0, 50, 100, 250, 500, 750 };
+	// int N1s[N_ALLOCS] = { 0, 50, 100, 250, 500, 1000, 2000 };
+	// int level0_meshes[N_MESHES] = { 20 };
 	// int N1s[N_ALLOCS] = { 250 };
 	int nxs[N_LEVELS] = { 0, nx };
 	int ** N0s = (int **) malloc(N_MESHES * sizeof(int *));
@@ -165,9 +165,9 @@ int main(void) {
 
 					nxs[0] = level0_meshes[i_mesh];
 					N0 = N0s[i_mesh][n_alloc];
-					// N0 = 25000, N1 = 250;
+					// N0 = 6250;
 					N_tot = N0 + N1;
-					sample_sizes[0] = N0, sample_sizes[1] = N1;
+					sample_sizes[0] = N0;
 					alloc_counters[i_mesh] = N_ALLOCS;
 					snprintf(nx0_str, 50, "%d", nxs[0]);
 					sprintf(file_name, "raw_ml_xhats_nx0=%s_N1=%s_n_data=%s.txt", nx0_str, N1_str, n_data_str);
@@ -226,7 +226,7 @@ int main(void) {
 	/* 																																																			 */
 	/* ----------------------------------------------------------------------------------------------------- */
 	////////// NOTE THIS DOES NOT HAVE NEW RNG
-	int N_nxs = 60, nx_incr = 5, N;
+	int N_nxs = 10, nx_incr = 5, N; //// Note value of the top level nx
 	int * nx_bpfs = (int *) malloc(N_nxs * sizeof(int));
 	double T, T_bin;
 	for (int n = 1; n <= N_nxs; n++)

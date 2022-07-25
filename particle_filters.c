@@ -293,13 +293,13 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
 	// FILE * CORRECTIONS = fopen("corrections.txt", "w");
 	// FILE * REGRESSION_CURVE = fopen("regression_curve.txt", "w");
+	// FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
+	// FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
+	// fprintf(REGRESSION_CURVE, "%d\n", mesh_size);
 	// FILE * LEVEL1_FINE = fopen("level1_fine.txt", "w");
 	// FILE * LEVEL1_COARSE = fopen("level1_coarse.txt", "w");
 	// FILE * LEVEL0_COARSE = fopen("level0_coarse.txt", "w");
 	// FILE * ML_DISTR = fopen("ml_distr.txt", "w");
-	// FILE * TRUE_CURVE = fopen("true_curve.txt", "w");
-	// FILE * TRUE_CURVE0 = fopen("true_curve0.txt", "w");
-	// fprintf(REGRESSION_CURVE, "%d\n", mesh_size);
 	// fprintf(ML_DISTR, "%d %d %d\n", N0, N1, N_tot);
 
 
@@ -379,7 +379,7 @@ void ml_bootstrap_particle_filter(HMM * hmm, int * sample_sizes, int * nxs, gsl_
 				// fprintf(REGRESSION_CURVE, "%.16e %.16e\n", s_mesh[l], poly_eval(s_mesh[l], poly_weights, poly_degree));
 
 				/* Output the true correction curve */
-			// 	solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
+				// solve(nx1, nt, dx1, dt, B1, rho1, rho_tilde1, s_mesh[l], rdx_sq1, main1, upper1, lower1, CURVE_DATA);
 			// 	g1 = rho1->data[obs_pos1];
 			// 	solve(nx0, nt, dx0, dt, B0, rho0, rho_tilde0, s_mesh[l], rdx_sq0, main0, upper0, lower0, CURVE_DATA);
 			// 	g0 = rho0->data[obs_pos0];
@@ -607,8 +607,10 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 		s[i] = sigmoid_inv(hmm->signal[0], upper_bound, lower_bound) + gsl_ran_gaussian(rng, sig_sd);
 
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-	FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
-	fprintf(BPF_DISTR, "%d\n", N);
+	FILE * BPF_XHATS = fopen("bpf_xhats.txt", "w");
+	// FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
+	// FILE * RES_BPF_DISTR = fopen("res_bpf_distr.txt", "w");	
+	// fprintf(BPF_DISTR, "%d %d\n", length, N);
 
 
 
@@ -652,8 +654,9 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 			x_hat += s_sig[i] * weights[i];
 		}
 		x_hats[n] = x_hat;
+		fprintf(BPF_XHATS, "%.16e ", x_hat);
 		// for (int i = 0; i < N; i++)
-		// 	fprintf(BPF_DISTR, "%e %e\n", weighted[n][i].x, weighted[n][i].w);
+			// fprintf(BPF_DISTR, "%.16e %.16e\n", weighted[n][i].x, weighted[n][i].w);
 
 
 
@@ -665,6 +668,8 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 		resample(N, weights, ind, rng);
 		for (int i = 0; i < N; i++)
 			s_res[i] = s[ind[i]];
+		// for (int i = 0; i < N; i++)
+			// fprintf(RES_BPF_DISTR, "%.16e ", sigmoid(s_res[i], upper_bound, lower_bound));
 		mutate(N, s, s_res, sig_sd, rng, n);
 
 		/* Initial condition update */
@@ -673,7 +678,9 @@ void bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** weig
 	}
 
 	fclose(CURVE_DATA);
-	fclose(BPF_DISTR);
+	fclose(BPF_XHATS);
+	// fclose(BPF_DISTR);
+	// fclose(RES_BPF_DISTR);
 
 	free(ind);
 	free(s);
@@ -749,7 +756,6 @@ void bootstrap_particle_filter_var_nx(HMM * hmm, int N, gsl_rng * rng, w_double 
 		s[i] = sigmoid_inv(s0, upper_bound, lower_bound) + gsl_ran_gaussian(rng, sig_sd);
 
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-	FILE * X_HATS = fopen("x_hats.txt", "w");
 	FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
 	fprintf(BPF_DISTR, "%d\n", N);
 
@@ -796,7 +802,6 @@ void bootstrap_particle_filter_var_nx(HMM * hmm, int N, gsl_rng * rng, w_double 
 			x_hat += s_sig[i] * weights[i];
 		}
 		x_hats[n] = x_hat;
-		fprintf(X_HATS, "%e ", x_hat);
 		// printf("n = %d, x_hat = %lf, sig = %lf\n", n, x_hat, hmm->signal[n]);
 		// for (int i = 0; i < N; i++)
 		// 	fprintf(BPF_DISTR, "%e %e\n", weighted[n][i].x, weighted[n][i].w);
@@ -819,7 +824,6 @@ void bootstrap_particle_filter_var_nx(HMM * hmm, int N, gsl_rng * rng, w_double 
 	}
 
 	fclose(CURVE_DATA);
-	fclose(X_HATS);
 	fclose(BPF_DISTR);
 
 	free(ind);
@@ -900,10 +904,11 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 	/* Files */
 	/* ----- */
 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-	FILE * BPF_PARTICLES = fopen("bpf_particles.txt", "w");
+	FILE * REF_PARTICLES = fopen("ref_particles.txt", "w");
 	FILE * NORMALISERS = fopen("normalisers.txt", "w");
-	FILE * BPF_DISTR = fopen("bpf_distr.txt", "w");
-	fprintf(BPF_PARTICLES, "%d %d\n", length, N);
+	FILE * REF_XHATS = fopen("ref_xhats.txt", "w");
+	FILE * RES_REF_DISTR = fopen("res_ref_distr.txt", "w");
+	fprintf(REF_PARTICLES, "%d %d\n", length, N);
 
 
 
@@ -946,8 +951,10 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 			x_hat += s_sig[i] * weights[i];
 		}
 		x_hats[n] = x_hat;
-		// fprintf(X_HATS, "%e ", x_hat);
+		fprintf(REF_XHATS, "%e ", x_hat);
 		printf("ref xhat(%d) = %lf\n", n, x_hat);
+		// for (int i = 0; i < N; i++)
+			// fprintf(REF_PARTICLES, "%.16e %.16e\n", weighted[n][i].x, weighted[n][i].w);
 
 
 
@@ -960,20 +967,21 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 		for (int i = 0; i < N; i++)
 			s_res[i] = s[ind[i]];
 		// for (int i = 0; i < N; i++)
-			// fprintf(BPF_PARTICLES, "%e ", s_res[i]);
-		// fprintf(BPF_PARTICLES, "\n");
+			// fprintf(RES_REF_DISTR, "%.16e ", sigmoid(s_res[i], upper_bound, lower_bound));
+			// fprintf(REF_PARTICLES, "%.16e ", s_res[i]);
+		// fprintf(REF_PARTICLES, "\n");
 		mutate(N, s, s_res, sig_sd, rng, n);
 
 		/* Initial condition update */
 		solve(nx, nt, dx, dt, B, rho_init, rho_tilde, x_hats[n], rdx_sq, main, upper, lower, CURVE_DATA);
-		// solve(nx, nt, dx, dt, B, rho_init, rho_tilde, hmm->signal[n], rdx_sq, main, upper, lower, CURVE_DATA);
 
 	}
 
 	fclose(CURVE_DATA);
-	fclose(BPF_PARTICLES);
+	fclose(REF_PARTICLES);
 	fclose(NORMALISERS);
-	fclose(BPF_DISTR);	
+	fclose(REF_XHATS);
+	fclose(RES_REF_DISTR);
 
 	free(ind);
 	free(s);
@@ -994,448 +1002,4 @@ void ref_bootstrap_particle_filter(HMM * hmm, int N, gsl_rng * rng, w_double ** 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-// void ml_bootstrap_particle_filter_debug(HMM * hmm, int * sample_sizes, int * nxs, gsl_rng * rng, w_double ** ml_weighted, FILE * L2_ERR_DATA) {
-	
-
-// 	/* --------------------------------------------------- Setup --------------------------------------------------- */
-// 	/* ------------------------------------------------------------------------------------------------------------- */
-
-// 	/* General parameters */
-// 	/* ------------------ */
-// 	int length = hmm->length;
-// 	int nx0 = nxs[0], nx1 = nxs[1];
-// 	int obs_pos0 = nx0 + 1;
-// 	int obs_pos1 = nx1 + 1;
-// 	int lag = hmm->lag, start_point = 0, counter0, counter1;
-// 	int N0 = sample_sizes[0], N1 = sample_sizes[1], N_tot = N0 + N1;
-// 	int poly_degree = 2, M_poly = poly_degree + 1;
-// 	double sign_rat = 0.0, coarse_scaler = 0.5;
-// 	double sig_sd = hmm->sig_sd, obs_sd = hmm->obs_sd;
-// 	double v = hmm->v, mu = hmm->mu;
-// 	double space_left = hmm->space_left, space_right = hmm->space_right;
-// 	double space_length = space_right - space_left;
-// 	double T_stop = hmm->T_stop;
-// 	double dx0 = space_length / (double) (nx0 - 1);
-// 	double dx1 = space_length / (double) (nx1 - 1);
-// 	double dt0 = CFL_CONST * dx0 / v;
-// 	double dt1 = CFL_CONST * dx1 / v;
-// 	double r0 = mu * dt0 / (2.0 * dx0 * dx0), r1 = mu * dt1 / (2.0 * dx1 * dx1);
-// 	double obs, normaliser, abs_normaliser, g0, g1, ml_xhat;
-// 	size_t size0 = (nx0 + 4) * sizeof(double), size1 = (nx1 + 4) * sizeof(double);
-// 	short * signs = (short *) malloc(N_tot * sizeof(short));
-// 	short * res_signs = (short *) malloc(N_tot * sizeof(short));
-// 	long * ind = (long *) malloc(N_tot * sizeof(long));
-// 	double * s = (double *) malloc(N_tot * sizeof(double));
-// 	double * s_res = (double *) malloc(N_tot * sizeof(double));
-// 	double * weights = (double *) malloc(N_tot * sizeof(double));
-// 	double * absolute_weights = (double *) malloc(N_tot * sizeof(double));
-// 	double * solns1 = (double *) malloc(N1 * sizeof(double));
-// 	double * solns0 = (double *) malloc(N1 * sizeof(double));
-// 	double * corrections = (double *) malloc(N1 * sizeof(double));
-// 	double * poly_weights = (double *) malloc((poly_degree + 1) * sizeof(double));
-// 	double * theta = (double *) calloc(2, sizeof(double));
-// 	double * xhats = (double *) malloc(length * sizeof(double));
-// 	double * rho0 = (double *) calloc(nx0 + 4, sizeof(double));
-// 	double * rho1 = (double *) calloc(nx1 + 4, sizeof(double));
-// 	double * ics0 = (double *) calloc(nx0 + 4, sizeof(double));
-// 	double * ics1 = (double *) calloc(nx1 + 4, sizeof(double));
-// 	double * slopes0 =  (double *) malloc((nx0 + 1) * sizeof(double));
-// 	double * Q_star0 = (double *) malloc(nx0 * sizeof(double));
-// 	double * slopes1 =  (double *) malloc((nx1 + 1) * sizeof(double));
-// 	double * Q_star1 = (double *) malloc(nx1 * sizeof(double));
-// 	double * xs0 = construct_space_mesh((nx0 + 4) * sizeof(double), space_left, dx0, nx0);
-// 	double * xs1 = construct_space_mesh((nx1 + 4) * sizeof(double), space_left, dx1, nx1);
-// 	double * PHI = (double *) malloc(N1 * M_poly * sizeof(double));
-// 	double * C = (double *) malloc(M_poly * M_poly * sizeof(double));
-// 	double * C_inv = (double *) malloc(M_poly * M_poly * sizeof(double));
-// 	double * MP = (double *) malloc(N1 * M_poly * sizeof(double));
-// 	double ** X = (double **) malloc(N_tot * sizeof(double *));
-// 	for (int i = 0; i < N_tot; i++)
-// 		X[i] = (double *) malloc((lag + 1) * sizeof(double));
-
-
-// 	/* Regression matrices */
-// 	/* ------------------- */
-// 	gsl_matrix * C_gsl = gsl_matrix_alloc(M_poly, M_poly);
-// 	gsl_permutation * p = gsl_permutation_alloc(M_poly);
-// 	gsl_matrix * C_inv_gsl = gsl_matrix_alloc(M_poly, M_poly);
-
-
-// 	/* Level 0 Crank-Nicolson matrices */
-// 	/* ------------------------------- */
-// 	/* Construct the forward time matrix */
-// 	gsl_vector * lower0 = gsl_vector_alloc(nx0 + 1);
-// 	gsl_vector * main0 = gsl_vector_alloc(nx0 + 2);
-// 	gsl_vector * upper0 = gsl_vector_alloc(nx0 + 1);
-// 	construct_forward(r0, nx0 + 2, lower0, main0, upper0);
-
-// 	/* Construct the present time matrix */
-// 	gsl_matrix * B0 = gsl_matrix_calloc(nx0 + 2, nx0 + 2);
-// 	gsl_vector * u0 = gsl_vector_calloc(nx0 + 2);
-// 	gsl_vector * Bu0 = gsl_vector_alloc(nx0 + 2);
-// 	construct_present(r0, nx0 + 2, B0);
-
-
-// 	/* Level 1 Crank-Nicolson matrices */
-// 	/* ------------------------------- */
-// 	/* Construct the forward time matrix */
-// 	gsl_vector * lower1 = gsl_vector_alloc(nx1 + 1);
-// 	gsl_vector * main1 = gsl_vector_alloc(nx1 + 2);
-// 	gsl_vector * upper1 = gsl_vector_alloc(nx1 + 1);
-// 	construct_forward(r1, nx1 + 2, lower1, main1, upper1);
-	
-// 	/* Construct the present time matrix */
-// 	gsl_matrix * B1 = gsl_matrix_calloc(nx1 + 2, nx1 + 2);
-// 	gsl_vector * u1 = gsl_vector_calloc(nx1 + 2);
-// 	gsl_vector * Bu1 = gsl_vector_alloc(nx1 + 2);
-// 	construct_present(r1, nx1 + 2, B1);
-
-
-// 	/* Initial conditions */
-// 	/* ------------------ */
-// 	double s0 = hmm->signal[0];
-// 	generate_ics(ics0, dx0, nx0, space_left);
-// 	generate_ics(ics1, dx1, nx1, space_left);
-// 	memcpy(rho0, ics0, size0);
-// 	memcpy(rho1, ics1, size1);
-// 	for (int i = 0; i < N_tot; i++) {
-// 		s[i] = gsl_ran_gaussian(rng, sig_sd) + s0;
-// 		X[i][0] = s[i];
-// 		res_signs[i] = 1;	
-// 	}
-// 	gsl_interp * ics_interp = gsl_interp_alloc(gsl_interp_linear, nx1 + 4);
-// 	gsl_interp_accel * acc = gsl_interp_accel_alloc();
-
-// 	/* Output files */
-// 	FILE * CURVE_DATA = fopen("curve_data.txt", "w");
-// 	// FILE * XHATS = fopen("xhats.txt", "w");
-// 	int Ns = 250, Ns_fine = 2000, i_min, i_max;
-// 	double s_min, s_max, s_glob_min, s_glob_max, l2_err = 0.0;
-// 	char nx0_str[50], name[100], reg_name[100], cor_name[100];
-// 	snprintf(nx0_str, 50, "%d", nx0);
-// 	sprintf(name, "corrections_nx0=%s.txt", nx0_str);
-// 	sprintf(reg_name, "regression_data_nx0=%s.txt", nx0_str);
-// 	sprintf(cor_name, "exact_corrections_nx0=%s.txt", nx0_str);
-// 	FILE * CORRECTIONS = fopen(name, "w");
-// 	FILE * REGRESSION_DATA = fopen(reg_name, "w");
-// 	FILE * EXACT_CORRECTIONS = fopen(cor_name, "w");
-
-
-
-// 	/* ---------------------------------------------- Time iterations ---------------------------------------------- */
-// 	/* ------------------------------------------------------------------------------------------------------------- */
-// 	for (int n = 0; n < length; n++) {
-
-// 		obs = hmm->observations[n];
-// 		if (n > lag)
-// 			start_point++;
-
-// 		s_glob_min = s[0], s_glob_max = s[N_tot - 1];
-// 		for (int i = 0; i < N_tot; i++) {
-// 			s_glob_min = s[i] < s_glob_min ? s[i] : s_glob_min;
-// 			s_glob_max = s[i] > s_glob_max ? s[i] : s_glob_max;
-// 		}
-
-
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		/*																											 */
-// 		/* Level 1 solutions																						 */
-// 		/*																											 */
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		normaliser = 0.0, abs_normaliser = 0.0;
-// 		for (int i = N0; i < N_tot; i++) {
-
-
-// 			/* Fine solution */
-// 			/* ------------- */
-// 			/* Fine solve with respect to the historical particles */
-// 			minmod_convection_diffusion_solver(rho1, nx1, dx1, dt1, obs_pos1, T_stop, CURVE_DATA, v, s[i], r1, lower1, main1, upper1, B1, u1, Bu1, slopes1, Q_star1);
-// 			solns1[i - N0] = rho1[obs_pos1];
-			
-
-// 			/* Coarse solution */
-// 			/* --------------- */
-// 			/* Coarse solve with respect to the historical particles */
-// 			minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, s[i], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-// 			solns0[i - N0] = rho0[obs_pos0];
-			
-// 			/* Reset the initial conditions to the current time level for the next particle weighting */
-// 			corrections[i - N0] = solns1[i - N0] - solns0[i - N0];
-// 			memcpy(rho1, ics1, size1);
-// 			memcpy(rho0, ics0, size0);
-
-// 			fprintf(CORRECTIONS, "%e %e\n", s[i], corrections[i - N0]);
-
-// 		}
-
-// 		if (N1 > 0) {
-
-// 			/* Determine the regression weights */
-// 			regression_fit(s, corrections, N0, N1, M_poly, poly_weights, PHI, C, C_inv, MP, C_gsl, p, C_inv_gsl);
-
-// 			/* Write the regressed correction curve based on the level 1 correction data */
-// 			double ds_fine = (s_glob_max - s_glob_min) / (double) (Ns_fine - 1);
-// 			for (int i = 0; i < Ns_fine; i++)
-// 				fprintf(REGRESSION_DATA, "%e ", s_glob_min + i * ds_fine);
-// 			fprintf(REGRESSION_DATA, "\n");
-// 			for (int i = 0; i < Ns_fine; i++)
-// 				fprintf(REGRESSION_DATA, "%e ", poly_eval(s_glob_min + i * ds_fine, poly_weights, poly_degree));
-// 			fprintf(REGRESSION_DATA, "\n");
-
-// 			// THIS IS THE REGRESSION PLOT CODE
-// 			/* Find the true correction curve based on the entire data set */
-// 			for (int i = 0; i < Ns_fine; i++) {
-
-// 				minmod_convection_diffusion_solver(rho1, nx1, dx1, dt1, obs_pos1, T_stop, CURVE_DATA, v, s_glob_min + i * ds_fine, r1, lower1, main1, upper1, B1, u1, Bu1, slopes1, Q_star1);				
-// 				minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, s_glob_min + i * ds_fine, r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-				
-// 				fprintf(EXACT_CORRECTIONS, "%e %e\n", s_glob_min + i * ds_fine, rho1[obs_pos1] - rho0[obs_pos0]);
-
-// 				/* Reset the initial conditions to the current time level for the next particle weighting */
-// 				memcpy(rho1, ics1, size1);
-// 				memcpy(rho0, ics0, size0);
-
-// 			}
-
-// 			// THIS IS THE L2 ERROR CODE
-// 			/* Find the true correction curve based on the entire data set */
-// 			for (int i = 0; i < N_tot; i++) {
-
-// 				minmod_convection_diffusion_solver(rho1, nx1, dx1, dt1, obs_pos1, T_stop, CURVE_DATA, v, s[i], r1, lower1, main1, upper1, B1, u1, Bu1, slopes1, Q_star1);				
-// 				minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, s[i], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-
-// 				l2_err += (rho1[obs_pos1] - rho0[obs_pos0] - poly_eval(s[i], poly_weights, poly_degree)) * (rho1[obs_pos1] - rho0[obs_pos0] - poly_eval(s[i], poly_weights, poly_degree)) / (double) length;
-
-// 				/* Reset the initial conditions to the current time level for the next particle weighting */
-// 				memcpy(rho1, ics1, size1);
-// 				memcpy(rho0, ics0, size0);
-
-// 			}
-
-// 		}
-
-
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		/*																											 */
-// 		/* Level 1 weight generation																				 */
-// 		/*																											 */
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		for (int i = N0; i < N_tot; i++) {
-
-// 			g1 = gsl_ran_gaussian_pdf(solns1[i - N0] - obs, obs_sd);
-// 			g0 = gsl_ran_gaussian_pdf(solns0[i - N0] + poly_eval(s[i], poly_weights, poly_degree) - obs, obs_sd);
-
-// 			weights[i] = (g1 - g0) * (double) res_signs[i] / (double) N1;
-// 			absolute_weights[i] = fabs(weights[i]);
-// 			normaliser += weights[i];
-// 			abs_normaliser += absolute_weights[i];
-
-// 		}
-
-
-
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		/*																											 */
-// 		/* Level 0 weight generation																				 */
-// 		/*																											 */
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		if (N1 > 0) {
-
-// 			for (int i = 0; i < N0; i++) {
-
-
-// 				/* Coarse solution */
-// 				/* --------------- */
-// 				/* Coarse solve with respect to the historical particles */
-// 				counter0 = 0;
-// 				for (int m = start_point; m < n; m++) {
-// 					minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, X[i][counter0], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-// 					counter0++;
-// 				}
-// 				minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, s[i], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-// 				g0 = gsl_ran_gaussian_pdf(rho0[obs_pos0] + poly_eval(s[i], poly_weights, poly_degree) - obs, obs_sd);
-
-
-// 				/* Weight computation */
-// 				/* ------------------ */
-// 				weights[i] = g0 * (double) res_signs[i] / (double) N0;
-// 				absolute_weights[i] = fabs(weights[i]);
-// 				normaliser += weights[i];
-// 				abs_normaliser += absolute_weights[i];
-
-// 				/* Reset the initial conditions to the current time level for the next particle weighting */
-// 				memcpy(rho0, ics0, size0);
-
-// 			}
-
-// 		}
-
-// 		else {
-
-// 			for (int i = 0; i < N0; i++) {
-
-
-// 				/* Coarse solution */
-// 				/* --------------- */
-// 				/* Coarse solve with respect to the historical particles */
-// 				counter0 = 0;
-// 				for (int m = start_point; m < n; m++) {
-// 					minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, X[i][counter0], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-// 					counter0++;
-// 				}
-// 				minmod_convection_diffusion_solver(rho0, nx0, dx0, dt0, obs_pos0, T_stop, CURVE_DATA, v, s[i], r0, lower0, main0, upper0, B0, u0, Bu0, slopes0, Q_star0);
-// 				g0 = gsl_ran_gaussian_pdf(rho0[obs_pos0] - obs, obs_sd);
-
-
-// 				/* Weight computation */
-// 				/* ------------------ */
-// 				weights[i] = g0 * (double) res_signs[i] / (double) N0;
-// 				absolute_weights[i] = fabs(weights[i]);
-// 				normaliser += weights[i];
-// 				abs_normaliser += absolute_weights[i];
-
-// 				/* Reset the initial conditions to the current time level for the next particle weighting */
-// 				memcpy(rho0, ics0, size0);
-
-// 			}
-
-// 		}
-
-
-
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		/*																											 */
-// 		/* Normalisation 																							 */
-// 		/*																											 */
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		ml_xhat = 0.0, sign_rat = 0.0;
-// 		for (int i = 0; i < N_tot; i++) {
-// 			absolute_weights[i] /= abs_normaliser;
-// 			weights[i] /= normaliser;
-// 			signs[i] = weights[i] < 0 ? -1 : 1;
-// 			ml_weighted[n][i].x = s[i];
-// 			ml_weighted[n][i].w = weights[i];
-// 			ml_xhat += s[i] * weights[i];
-// 		}
-// 		xhats[n] = ml_xhat;
-// 		// fprintf(XHATS, "%e ", ml_xhat);
-
-
-
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		/*																											 */
-// 		/* Resample and mutate 																						 */
-// 		/*																											 */
-// 		/* --------------------------------------------------------------------------------------------------------- */
-// 		resample(N_tot, absolute_weights, ind, rng);
-// 		for (int i = 0; i < N_tot; i++) {
-// 			s_res[i] = s[ind[i]];
-// 			res_signs[i] = signs[ind[i]];
-// 		}
-// 		mutate(N_tot, s, s_res, sig_sd, rng, n);
-
-// 		if (n < lag) {
-
-// 			/* Load the mutated particles into the historical particle array */
-// 			for (int i = 0; i < N_tot; i++)
-// 				X[i][n + 1] = s[i];
-
-// 		}
-// 		else {
-
-// 			/* Shift the particles left one position and lose the oldest ancestor */
-// 			for (int m = 0; m < lag; m++) {
-// 				for (int i = 0; i < N_tot; i++)
-// 					X[i][m] = X[i][m + 1];
-// 			}
-
-// 			/* Load the mutated particles into the vacant entry in the historical particle array */
-// 			for (int i = 0; i < N_tot; i++)
-// 				X[i][lag] = s[i];
-
-// 			/* Evolve the fine initial condition with respect to the (n - lag)-th MSE-minimising point estimate */
-// 			minmod_convection_diffusion_solver(rho1, nx1, dx1, dt1, obs_pos1, T_stop, CURVE_DATA, v, xhats[n - lag], r1, lower1, main1, upper1, B1, u1, Bu1, slopes1, Q_star1);
-
-// 			/* Interpolate the coarse initial conditions from the fine initial condition evolved with respect to the nth MSE-minimising point estimate */
-// 			gsl_interp_init(ics_interp, xs1, rho1, nx1 + 4);
-// 			for (int j = 2; j < nx0 + 2; j++)
-// 				rho0[j] = gsl_interp_eval(ics_interp, xs1, rho1, xs0[j], acc);
-
-// 			memcpy(ics1, rho1, size1);
-// 			memcpy(ics0, rho0, size0);
-
-// 		}
-
-// 	}
-// 	if (N1 > 0)
-// 		fprintf(L2_ERR_DATA, "%e ", l2_err);
-
-// 	fclose(CURVE_DATA);
-// 	// fclose(XHATS);
-// 	fclose(CORRECTIONS);
-// 	fclose(REGRESSION_DATA);
-// 	fclose(EXACT_CORRECTIONS);
-
-// 	free(signs);
-// 	free(res_signs);
-// 	free(ind);
-// 	free(s);
-// 	free(s_res);
-// 	free(weights);
-// 	free(absolute_weights);
-// 	free(solns1);
-// 	free(solns0);
-// 	free(corrections);
-// 	free(poly_weights);
-// 	free(theta);
-// 	free(xhats);
-// 	free(rho0);
-// 	free(rho1);
-// 	free(ics0);
-// 	free(ics1);
-// 	free(slopes0);
-// 	free(Q_star0);
-// 	free(slopes1);
-// 	free(Q_star1);
-// 	free(xs0);
-// 	free(xs1);
-// 	free(PHI);
-// 	free(C);
-// 	free(C_inv);
-// 	free(MP);
-// 	free(X);
-
-// 	gsl_matrix_free(C_gsl);
-// 	gsl_permutation_free(p);
-// 	gsl_matrix_free(C_inv_gsl);
-
-// 	gsl_interp_free(ics_interp);
-// 	gsl_interp_accel_free(acc);
-
-// 	gsl_vector_free(lower0);
-// 	gsl_vector_free(main0);
-// 	gsl_vector_free(upper0);
-// 	gsl_matrix_free(B0);
-// 	gsl_vector_free(u0);
-// 	gsl_vector_free(Bu0);
-// 	gsl_vector_free(lower1);
-// 	gsl_vector_free(main1);
-// 	gsl_vector_free(upper1);	
-// 	gsl_matrix_free(B1);
-// 	gsl_vector_free(u1);
-// 	gsl_vector_free(Bu1);
-
-// }
 
